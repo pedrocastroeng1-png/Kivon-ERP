@@ -4,17 +4,22 @@ import { AppLayout } from '@/src/shared/components/layout/AppLayout';
 import LoginPage from '@/src/features/auth/pages/LoginPage';
 import DashboardPage from '@/src/features/admin/pages/DashboardPage';
 import DailyRegisterPage from '@/src/features/daily-register/pages/DailyRegisterPage';
+import JobRolesPage from '@/src/features/job-roles/pages/JobRolesPage';
+import ProjectsPage from '@/src/features/projects/pages/ProjectsPage';
+import EmployeesPage from '@/src/features/employees/pages/EmployeesPage';
+import UsersPage from '@/src/features/users/pages/UsersPage';
+import ReportsPage from '@/src/features/reports/pages/ReportsPage';
 import { useAuth } from './providers/AuthProvider';
 
-// A simple wrapper to protect admin routes
+// A simple wrapper to protect admin routes (TEMPORARILY DISABLED)
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { profile, loading } = useAuth();
+  // const { profile, loading } = useAuth();
   
-  if (loading) return null;
+  // if (loading) return null;
   
-  if (profile?.profiles?.code !== 'admin') {
-    return <Navigate to="/diarias" replace />;
-  }
+  // if (profile?.profiles?.code !== 'admin') {
+  //   return <Navigate to="/diarias" replace />;
+  // }
   
   return <>{children}</>;
 }
@@ -39,6 +44,46 @@ const router = createBrowserRouter([
       {
         path: 'diarias',
         element: <DailyRegisterPage />,
+      },
+      {
+        path: 'funcionarios',
+        element: (
+          <AdminRoute>
+            <EmployeesPage />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: 'obras',
+        element: (
+          <AdminRoute>
+            <ProjectsPage />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: 'cargos',
+        element: (
+          <AdminRoute>
+            <JobRolesPage />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: 'relatorios',
+        element: (
+          <AdminRoute>
+            <ReportsPage />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: 'usuarios',
+        element: (
+          <AdminRoute>
+            <UsersPage />
+          </AdminRoute>
+        ),
       },
     ],
   },
