@@ -9,9 +9,20 @@ export function AppLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // TEMPORARILY MOCK PROFILE FOR DEVELOPMENT
-  const isAdmin = true; // profile?.profiles?.code === 'admin';
-  const isOperator = true; // profile?.profiles?.code === 'operador';
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  const isAdmin = profile?.profiles?.code === 'admin';
+  const isOperator = profile?.profiles?.code === 'operador';
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Activity, show: isAdmin },
@@ -79,8 +90,8 @@ export function AppLayout() {
                   </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-white">{profile?.full_name || 'Usuário Dev'}</p>
-                  <p className="text-xs font-medium text-slate-400">{profile?.profiles?.name || 'Admin (Modo Dev)'}</p>
+                  <p className="text-sm font-medium text-white">{profile?.full_name || 'Usuário'}</p>
+                  <p className="text-xs font-medium text-slate-400">{profile?.profiles?.name || 'Carregando...'}</p>
                 </div>
               </div>
               <button
@@ -143,8 +154,8 @@ export function AppLayout() {
                 </span>
               </div>
               <div className="ml-3 truncate">
-                <p className="truncate text-sm font-medium text-white">{profile?.full_name || 'Usuário Dev'}</p>
-                <p className="truncate text-xs font-medium text-slate-400">{profile?.profiles?.name || 'Administrador'}</p>
+                <p className="truncate text-sm font-medium text-white">{profile?.full_name || 'Usuário'}</p>
+                <p className="truncate text-xs font-medium text-slate-400">{profile?.profiles?.name || 'Carregando...'}</p>
               </div>
             </div>
             <button

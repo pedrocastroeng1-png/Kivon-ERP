@@ -9,6 +9,7 @@ interface PresenceReport {
   id: string;
   presence_date: string;
   shift: string;
+  status: string;
   employees: {
     full_name: string;
     document_number: string;
@@ -53,6 +54,7 @@ export default function ReportsPage() {
         id,
         presence_date,
         shift,
+        status,
         employees (full_name, document_number),
         projects (name, code)
       `)
@@ -74,13 +76,14 @@ export default function ReportsPage() {
   function exportCSV() {
     if (data.length === 0) return;
     
-    const headers = ['Data', 'Turno', 'Obra', 'Funcionário', 'Documento'];
+    const headers = ['Data', 'Obra', 'Funcionário', 'Documento', 'Turno', 'Status'];
     const rows = data.map(row => [
       format(parseISO(row.presence_date), 'dd/MM/yyyy'),
-      row.shift.toUpperCase(),
       `"${row.projects?.name || ''}"`,
       `"${row.employees?.full_name || ''}"`,
-      row.employees?.document_number || ''
+      row.employees?.document_number || '',
+      row.shift.toUpperCase(),
+      row.status || 'PRESENTE'
     ]);
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -158,6 +161,7 @@ export default function ReportsPage() {
                 <th className="px-6 py-3">Obra</th>
                 <th className="px-6 py-3">Funcionário</th>
                 <th className="px-6 py-3">Turno</th>
+                <th className="px-6 py-3">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -167,6 +171,16 @@ export default function ReportsPage() {
                   <td className="px-6 py-4">{row.projects?.name}</td>
                   <td className="px-6 py-4">{row.employees?.full_name}</td>
                   <td className="px-6 py-4 uppercase">{row.shift}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                      row.status === 'PRESENTE' ? 'bg-green-50 text-green-700 ring-green-600/20' : 
+                      row.status === 'FALTOU' ? 'bg-red-50 text-red-700 ring-red-600/20' : 
+                      row.status === 'ATESTADO' ? 'bg-yellow-50 text-yellow-800 ring-yellow-600/20' : 
+                      'bg-gray-50 text-gray-600 ring-gray-500/10'
+                    }`}>
+                      {row.status || 'PRESENTE'}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

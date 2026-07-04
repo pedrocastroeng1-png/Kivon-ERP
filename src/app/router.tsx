@@ -2,6 +2,7 @@ import React from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/src/shared/components/layout/AppLayout';
 import LoginPage from '@/src/features/auth/pages/LoginPage';
+import UpdatePasswordPage from '@/src/features/auth/pages/UpdatePasswordPage';
 import DashboardPage from '@/src/features/admin/pages/DashboardPage';
 import DailyRegisterPage from '@/src/features/daily-register/pages/DailyRegisterPage';
 import JobRolesPage from '@/src/features/job-roles/pages/JobRolesPage';
@@ -11,15 +12,15 @@ import UsersPage from '@/src/features/users/pages/UsersPage';
 import ReportsPage from '@/src/features/reports/pages/ReportsPage';
 import { useAuth } from './providers/AuthProvider';
 
-// A simple wrapper to protect admin routes (TEMPORARILY DISABLED)
+// A simple wrapper to protect admin routes
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  // const { profile, loading } = useAuth();
+  const { profile, loading } = useAuth();
   
-  // if (loading) return null;
+  if (loading) return null;
   
-  // if (profile?.profiles?.code !== 'admin') {
-  //   return <Navigate to="/diarias" replace />;
-  // }
+  if (profile?.profiles?.code !== 'admin') {
+    return <Navigate to="/diarias" replace />;
+  }
   
   return <>{children}</>;
 }
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/update-password',
+    element: <UpdatePasswordPage />,
   },
   {
     path: '/',

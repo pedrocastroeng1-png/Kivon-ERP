@@ -79,6 +79,29 @@ export default function LoginPage() {
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </div>
+
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError('Digite seu email para redefinir a senha.');
+                  return;
+                }
+                setLoading(true);
+                const { error } = await supabase.auth.resetPasswordForEmail(email);
+                if (error) {
+                  setError('Erro: ' + error.message);
+                } else {
+                  setError('Um link de redefinição foi enviado para seu e-mail.');
+                }
+                setLoading(false);
+              }}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
         </form>
       </div>
     </div>

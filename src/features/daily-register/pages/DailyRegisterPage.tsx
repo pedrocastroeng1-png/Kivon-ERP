@@ -135,10 +135,6 @@ export default function DailyRegisterPage() {
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
       
-      // Since registrar_presenca RPC is a stub, we will do it directly via insert to avoid RPC error.
-      // In a real scenario, the backend migration would have the full RPC logic.
-      
-      // Insert via standard insert
       let finalPhotoId = photoId;
       if (!finalPhotoId && shift === 'tarde') {
          const { data: photos } = await supabase
@@ -154,13 +150,14 @@ export default function DailyRegisterPage() {
 
       const { data: userSession } = await supabase.auth.getSession();
       
-      const { error } = await supabase.from('presence').insert({
-        project_id: selectedProjectId,
-        employee_id: employeeId,
-        shift: shift,
-        presence_date: today,
-        photo_id: finalPhotoId,
-        registered_by: userSession.session?.user.id
+      const { error } = await supabase.rpc('registrar_presenca', {
+        p_project_id: selectedProjectId,
+        p_employee_id: employeeId,
+        p_presence_date: today,
+        p_shift: shift,
+        p_photo_id: finalPhotoId || null,
+        p_status: 'PRESENTE',
+        p_presence_time: null
       });
 
       if (error) throw error;
