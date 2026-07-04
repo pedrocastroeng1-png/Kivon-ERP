@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "KIVON ERP",
+  "description": "KIVON ERP - Sistema Integrado de Gestão",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

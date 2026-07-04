@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/src/app/providers/AuthProvider';
-import { Home, Calendar, LogOut, Loader2, Menu, X, Users, Briefcase, Building, FileText, Settings, Database, Activity } from 'lucide-react';
+import { Home, Calendar, LogOut, Loader2, Menu, X, Users, Briefcase, Building, FileText, Settings, Database, Activity, CalendarCheck } from 'lucide-react';
 import { cn } from '@/src/shared/lib/utils';
 
 export function AppLayout() {
@@ -27,6 +27,7 @@ export function AppLayout() {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Activity, show: isAdmin },
     { name: 'Diárias', href: '/diarias', icon: Calendar, show: isAdmin || isOperator },
+    { name: 'Fechamento Diário', href: '/fechamento-diario', icon: CalendarCheck, show: isAdmin || isOperator },
     { name: 'Funcionários', href: '/funcionarios', icon: Users, show: isAdmin },
     { name: 'Obras', href: '/obras', icon: Building, show: isAdmin },
     { name: 'Cargos', href: '/cargos', icon: Briefcase, show: isAdmin },

@@ -1,92 +1,82 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
-import { useAuth } from '@/src/app/providers/AuthProvider';
-import { Users, HardHat, Briefcase, CalendarCheck } from 'lucide-react';
+import { 
+  Users, 
+  HardHat, 
+  CalendarCheck, 
+  Briefcase,
+  DollarSign
+} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
 
 export default function DashboardPage() {
-  const { profile } = useAuth();
   const [stats, setStats] = useState({
     activeEmployees: 0,
     activeProjects: 0,
     presenceToday: 0,
     presenceMonth: 0,
+    diariasHoje: 0,
+    diariasMes: 0
   });
   
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchStats();
   }, []);
 
-  async function fetchDashboardData() {
+  async function fetchStats() {
     setLoading(true);
     
-    // 1. Active Employees
-    const { count: empCount } = await supabase
-      .from('employees')
-      .select('*', { count: 'exact', head: true })
-      .eq('active', true);
-
-    // 2. Active Projects
-    const { count: projCount } = await supabase
-      .from('projects')
-      .select('*', { count: 'exact', head: true })
-      .eq('active', true);
-
-    // 3. Presence Today
     const today = format(new Date(), 'yyyy-MM-dd');
-    const { count: presenceTodayCount } = await supabase
-      .from('presence')
-      .select('*', { count: 'exact', head: true })
-      .eq('presence_date', today)
-      .eq('active', true)
-      .eq('status', 'PRESENTE');
+    const startOfMonth = format(new Date(new Date().setDate(1)), 'yyyy-MM-dd');
 
-    // 4. Presence This Month
-    const startOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
-    const { count: presenceMonthCount } = await supabase
+    // Counts
+    const { count: empCount } = await supabase.from('employees').select('*', { count: 'exact', head: true }).eq('active', true);
+    const { count: projCount } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('active', true);
+    
+    // Fetch presences to calculate total values
+    const { data: presences } = await supabase
       .from('presence')
-      .select('*', { count: 'exact', head: true })
+      .select('presence_date, status, shift, employees(job_roles(daily_rate))')
       .gte('presence_date', startOfMonth)
-      .eq('active', true)
-      .eq('status', 'PRESENTE');
+      .eq('active', true);
+
+    let pTodayCount = 0;
+    let pMonthCount = 0;
+    let valHoje = 0;
+    let valMes = 0;
+
+    if (presences) {
+      presences.forEach((p: any) => {
+        if (p.status === 'PRESENTE') {
+          pMonthCount++;
+          const rate = p.employees?.job_roles?.daily_rate || 0;
+          valMes += (rate * 0.5);
+
+          if (p.presence_date === today) {
+            pTodayCount++;
+            valHoje += (rate * 0.5);
+          }
+        }
+      });
+    }
 
     setStats({
       activeEmployees: empCount || 0,
       activeProjects: projCount || 0,
-      presenceToday: presenceTodayCount || 0,
-      presenceMonth: presenceMonthCount || 0,
+      presenceToday: pTodayCount,
+      presenceMonth: pMonthCount,
+      diariasHoje: valHoje,
+      diariasMes: valMes
     });
 
     // Chart Data (Last 7 days presence)
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    const last7Days = format(d, 'yyyy-MM-dd');
-    
-    const { data: chartPresence } = await supabase
-      .from('presence')
-      .select('presence_date, shift')
-      .gte('presence_date', last7Days)
-      .eq('active', true)
-      .eq('status', 'PRESENTE');
-
-    if (chartPresence) {
-      // Aggregate by date
+    if (presences) {
       const agg: Record<string, { manha: number, tarde: number }> = {};
       
-      // Initialize last 7 days
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
@@ -94,10 +84,10 @@ export default function DashboardPage() {
         agg[dateStr] = { manha: 0, tarde: 0 };
       }
 
-      chartPresence.forEach(p => {
-        if (agg[p.presence_date]) {
-          if (p.shift === 'manha') agg[p.presence_date].manha++;
-          if (p.shift === 'tarde') agg[p.presence_date].tarde++;
+      presences.forEach((p: any) => {
+        if (agg[p.presence_date] && p.status === 'PRESENTE') {
+          if (p.shift === 'manha') agg[p.presence_date].manha += 0.5;
+          if (p.shift === 'tarde') agg[p.presence_date].tarde += 0.5;
         }
       });
 
@@ -106,10 +96,9 @@ export default function DashboardPage() {
         Manhã: agg[date].manha,
         Tarde: agg[date].tarde,
       }));
-
       setChartData(formattedChartData);
     }
-
+    
     setLoading(false);
   }
 
@@ -126,99 +115,117 @@ export default function DashboardPage() {
       
       {loading ? (
         <div className="animate-pulse space-y-6">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[1,2,3,4].map(i => <div key={i} className="h-28 bg-slate-200 rounded-lg"></div>)}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-28 bg-slate-200 rounded-lg"></div>)}
           </div>
           <div className="h-96 bg-slate-200 rounded-lg"></div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md">
-              <div className="p-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            
+            <div className="overflow-hidden rounded-lg bg-emerald-50 border border-emerald-100 shadow-sm">
+              <div className="p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-indigo-50 border border-indigo-100">
-                      <Users className="h-5 w-5 text-indigo-600" />
-                    </div>
+                    <DollarSign className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <div className="ml-4 w-0 flex-1">
+                  <div className="ml-3 w-0 flex-1">
                     <dl>
-                      <dt className="truncate text-sm font-medium text-slate-500">Funcionários Ativos</dt>
-                      <dd className="mt-1 flex items-baseline">
-                        <div className="text-2xl font-bold text-slate-900">{stats.activeEmployees}</div>
-                      </dd>
+                      <dt className="truncate text-xs font-medium text-emerald-800">Diárias Hoje</dt>
+                      <dd className="mt-1 text-xl font-bold text-emerald-900">R$ {stats.diariasHoje.toFixed(2).replace('.', ',')}</dd>
                     </dl>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md">
-              <div className="p-5">
+            <div className="overflow-hidden rounded-lg bg-blue-50 border border-blue-100 shadow-sm">
+              <div className="p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-50 border border-slate-200">
-                      <HardHat className="h-5 w-5 text-slate-700" />
-                    </div>
+                    <DollarSign className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div className="ml-4 w-0 flex-1">
+                  <div className="ml-3 w-0 flex-1">
                     <dl>
-                      <dt className="truncate text-sm font-medium text-slate-500">Obras Ativas</dt>
-                      <dd className="mt-1 flex items-baseline">
-                        <div className="text-2xl font-bold text-slate-900">{stats.activeProjects}</div>
-                      </dd>
+                      <dt className="truncate text-xs font-medium text-blue-800">Diárias no Mês</dt>
+                      <dd className="mt-1 text-xl font-bold text-blue-900">R$ {stats.diariasMes.toFixed(2).replace('.', ',')}</dd>
                     </dl>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md">
-              <div className="p-5">
+            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
+              <div className="p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-50 border border-emerald-100">
-                      <CalendarCheck className="h-5 w-5 text-emerald-600" />
-                    </div>
+                    <CalendarCheck className="h-5 w-5 text-indigo-600" />
                   </div>
-                  <div className="ml-4 w-0 flex-1">
+                  <div className="ml-3 w-0 flex-1">
                     <dl>
-                      <dt className="truncate text-sm font-medium text-slate-500">Presenças Hoje (Turnos)</dt>
-                      <dd className="mt-1 flex items-baseline">
-                        <div className="text-2xl font-bold text-slate-900">{stats.presenceToday}</div>
-                      </dd>
+                      <dt className="truncate text-xs font-medium text-slate-500">Presenças Hoje</dt>
+                      <dd className="mt-1 text-xl font-bold text-slate-900">{stats.presenceToday}</dd>
                     </dl>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm transition-all hover:shadow-md">
-              <div className="p-5">
+            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
+              <div className="p-4">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-50 border border-blue-100">
-                      <Briefcase className="h-5 w-5 text-blue-600" />
-                    </div>
+                    <Briefcase className="h-5 w-5 text-slate-600" />
                   </div>
-                  <div className="ml-4 w-0 flex-1">
+                  <div className="ml-3 w-0 flex-1">
                     <dl>
-                      <dt className="truncate text-sm font-medium text-slate-500">Presenças no Mês</dt>
-                      <dd className="mt-1 flex items-baseline">
-                        <div className="text-2xl font-bold text-slate-900">{stats.presenceMonth}</div>
-                      </dd>
+                      <dt className="truncate text-xs font-medium text-slate-500">Presenças Mês</dt>
+                      <dd className="mt-1 text-xl font-bold text-slate-900">{stats.presenceMonth}</dd>
                     </dl>
                   </div>
                 </div>
               </div>
             </div>
+
+            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
+              <div className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Users className="h-5 w-5 text-slate-600" />
+                  </div>
+                  <div className="ml-3 w-0 flex-1">
+                    <dl>
+                      <dt className="truncate text-xs font-medium text-slate-500">Funcionários</dt>
+                      <dd className="mt-1 text-xl font-bold text-slate-900">{stats.activeEmployees}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
+              <div className="p-4">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <HardHat className="h-5 w-5 text-slate-600" />
+                  </div>
+                  <div className="ml-3 w-0 flex-1">
+                    <dl>
+                      <dt className="truncate text-xs font-medium text-slate-500">Obras</dt>
+                      <dd className="mt-1 text-xl font-bold text-slate-900">{stats.activeProjects}</dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
             <div className="border-b border-slate-200 bg-white px-5 py-4">
               <h3 className="text-base font-semibold leading-6 text-slate-900">
-                Evolução de Presenças (Últimos 7 Dias)
+                Evolução de Diárias (Últimos 7 Dias)
               </h3>
             </div>
             <div className="p-5">
@@ -243,8 +250,8 @@ export default function DashboardPage() {
                       contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     />
                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar dataKey="Manhã" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    <Bar dataKey="Tarde" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Manhã" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} stackId="a" />
+                    <Bar dataKey="Tarde" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} stackId="a" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

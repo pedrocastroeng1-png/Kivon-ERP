@@ -309,7 +309,7 @@ export default function DailyRegisterPage() {
               audio={false}
               ref={webcamRef}
               screenshotFormat="image/jpeg"
-              videoConstraints={{ facingMode: "user" }}
+              videoConstraints={{ facingMode: "environment" }}
               className="w-full h-auto"
             />
           </div>

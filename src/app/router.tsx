@@ -5,6 +5,7 @@ import LoginPage from '@/src/features/auth/pages/LoginPage';
 import UpdatePasswordPage from '@/src/features/auth/pages/UpdatePasswordPage';
 import DashboardPage from '@/src/features/admin/pages/DashboardPage';
 import DailyRegisterPage from '@/src/features/daily-register/pages/DailyRegisterPage';
+import DailyReportsPage from '@/src/features/daily-reports/pages/DailyReportsPage';
 import JobRolesPage from '@/src/features/job-roles/pages/JobRolesPage';
 import ProjectsPage from '@/src/features/projects/pages/ProjectsPage';
 import EmployeesPage from '@/src/features/employees/pages/EmployeesPage';
@@ -49,6 +50,10 @@ const router = createBrowserRouter([
       {
         path: 'diarias',
         element: <DailyRegisterPage />,
+      },
+      {
+        path: 'fechamento-diario',
+        element: <DailyReportsPage />,
       },
       {
         path: 'funcionarios',
