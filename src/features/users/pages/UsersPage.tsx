@@ -81,7 +81,8 @@ export default function UsersPage() {
 
   async function callApi(url: string, method: string = 'POST', body?: any) {
     const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(url, {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const res = await fetch(`${apiUrl}${url}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -89,11 +90,20 @@ export default function UsersPage() {
       },
       body: body ? JSON.stringify(body) : undefined
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'API request failed');
+    
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro na requisição da API');
+      }
+      return data;
+    } else {
+      if (!res.ok) {
+        throw new Error(`Erro na API (${res.status}): O endpoint ${url} não retornou JSON. Isso ocorre se a API não estiver rodando ou a rota estiver incorreta.`);
+      }
+      return null;
     }
-    return res.json();
   }
 
   async function onSubmit(data: UserForm) {
@@ -148,51 +158,51 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-kivon-border">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Usuários</h1>
-          <p className="mt-1 text-sm text-gray-500">Gerencie o acesso ao sistema (Administradores e Operadores).</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Usuários</h1>
+          <p className="mt-2 text-sm text-kivon-text-sec">Gerencie o acesso ao sistema (Administradores e Operadores).</p>
         </div>
-        <Button onClick={() => openModal()} className="w-full sm:w-auto">
+        <Button onClick={() => openModal()} className="w-full sm:w-auto bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
           <Plus className="mr-2 h-4 w-4" /> Novo Usuário
         </Button>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl overflow-hidden">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-kivon-primary" />
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-10 text-gray-500">
+          <div className="text-center py-12 text-kivon-text-sec">
             Nenhum usuário encontrado.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-500">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-700">
+            <table className="w-full text-left text-sm text-kivon-text-sec">
+              <thead className="bg-kivon-bg/50 text-xs uppercase text-kivon-text-sec">
                 <tr>
-                  <th className="px-6 py-3">Nome</th>
-                  <th className="px-6 py-3">Perfil</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3 text-right">Ações</th>
+                  <th className="px-6 py-4 font-semibold">Nome</th>
+                  <th className="px-6 py-4 font-semibold">Perfil</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-kivon-border">
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b bg-white hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{user.full_name}</td>
+                  <tr key={user.id} className="bg-kivon-card hover:bg-kivon-hover transition-colors group">
+                    <td className="px-6 py-4 font-medium text-white">{user.full_name}</td>
                     <td className="px-6 py-4">{user.profiles?.name || '-'}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-5 ${user.active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                         {user.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => openModal(user)}
-                          className="text-slate-500 hover:text-indigo-600"
+                          className="p-1 text-kivon-text-sec hover:text-kivon-primary transition-colors"
                           title="Editar perfil"
                         >
                           <Edit2 className="h-4 w-4" />
@@ -200,7 +210,7 @@ export default function UsersPage() {
                         <button
                           onClick={() => resendInvite(user.id)}
                           disabled={actionLoading === `invite-${user.id}`}
-                          className="text-slate-500 hover:text-indigo-600 disabled:opacity-50"
+                          className="p-1 text-kivon-text-sec hover:text-kivon-primary disabled:opacity-50 transition-colors"
                           title="Reenviar convite"
                         >
                           {actionLoading === `invite-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
@@ -208,7 +218,7 @@ export default function UsersPage() {
                         <button
                           onClick={() => sendResetPassword(user.id)}
                           disabled={actionLoading === `reset-${user.id}`}
-                          className="text-slate-500 hover:text-indigo-600 disabled:opacity-50"
+                          className="p-1 text-kivon-text-sec hover:text-kivon-primary disabled:opacity-50 transition-colors"
                           title="Redefinir senha"
                         >
                           {actionLoading === `reset-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
@@ -218,6 +228,7 @@ export default function UsersPage() {
                           size="sm" 
                           onClick={() => toggleActive(user.id, user.active)}
                           isLoading={actionLoading === user.id}
+                          className="bg-kivon-bg text-kivon-text-sec hover:text-white border border-kivon-border"
                         >
                           {user.active ? 'Inativar' : 'Ativar'}
                         </Button>
@@ -232,27 +243,31 @@ export default function UsersPage() {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Editar Perfil' : 'Novo Usuário'}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input label="Nome Completo" {...register('fullName')} error={errors.fullName?.message} />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-2">
+          <Input label="Nome Completo" {...register('fullName')} error={errors.fullName?.message} className="bg-kivon-bg border-kivon-border text-white" />
           {!editingId && (
-            <Input label="E-mail" type="email" {...register('email')} error={errors.email?.message} />
+            <Input label="E-mail" type="email" {...register('email')} error={errors.email?.message} className="bg-kivon-bg border-kivon-border text-white" />
           )}
           
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Perfil</label>
+            <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Perfil</label>
             <select
               {...register('profileCode')}
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
             >
               <option value="operador">Operador (Acesso restrito)</option>
               <option value="admin">Administrador (Acesso total)</option>
             </select>
-            {errors.profileCode && <p className="mt-1 text-sm text-red-500">{errors.profileCode.message}</p>}
+            {errors.profileCode && <p className="mt-1 text-sm text-red-400">{errors.profileCode.message}</p>}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" isLoading={isSubmitting}>Salvar</Button>
+          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
+            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">
+              Cancelar
+            </Button>
+            <Button type="submit" isLoading={isSubmitting} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
+              Salvar
+            </Button>
           </div>
         </form>
       </Modal>

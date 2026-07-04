@@ -224,16 +224,16 @@ export default function DailyRegisterPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Cadastro de Diárias</h1>
-        <p className="mt-1 text-sm text-gray-500">Registre a presença dos funcionários nas obras.</p>
+      <div className="pb-6 border-b border-kivon-border">
+        <h1 className="text-3xl font-bold tracking-tight text-white">Cadastro de Diárias</h1>
+        <p className="mt-2 text-sm text-kivon-text-sec">Registre a presença dos funcionários nas obras.</p>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl p-6">
         <div className="mb-6 max-w-sm">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Selecione a Obra</label>
+          <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Selecione a Obra</label>
           <select
-            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
           >
@@ -246,51 +246,51 @@ export default function DailyRegisterPage() {
 
         {selectedProjectId && (
           <>
-            <div className="mb-6 flex items-center rounded-md border border-gray-300 px-3 max-w-sm">
-              <Search className="mr-2 h-5 w-5 text-gray-400" />
+            <div className="mb-6 flex items-center rounded-lg border border-kivon-border bg-kivon-bg px-3 max-w-sm focus-within:ring-1 focus-within:ring-kivon-primary focus-within:border-kivon-primary transition-all">
+              <Search className="mr-2 h-5 w-5 text-kivon-text-sec" />
               <input
                 type="text"
                 placeholder="Pesquisar funcionário..."
-                className="w-full border-0 bg-transparent py-2 focus:ring-0 outline-none text-sm"
+                className="w-full border-0 bg-transparent py-2.5 text-white placeholder-kivon-text-sec focus:ring-0 outline-none text-sm"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-kivon-primary" />
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
+              <div className="text-center py-12 text-kivon-text-sec bg-kivon-bg/50 rounded-lg border border-kivon-border border-dashed">
                 Nenhum funcionário encontrado nesta obra.
               </div>
             ) : (
               <div className="space-y-4">
                 {filtered.map(emp => (
-                  <div key={emp.employee_id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50">
+                  <div key={emp.employee_id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-kivon-border bg-kivon-card p-5 hover:bg-kivon-hover transition-colors">
                     <div>
-                      <h3 className="font-medium text-gray-900">{emp.full_name}</h3>
-                      <p className="text-sm text-gray-500">{emp.job_role_name} • R$ {emp.daily_rate?.toFixed(2) || '0.00'}/dia</p>
+                      <h3 className="font-medium text-white text-base">{emp.full_name}</h3>
+                      <p className="text-sm text-kivon-text-sec mt-0.5">{emp.job_role_name} • R$ {emp.daily_rate?.toFixed(2) || '0.00'}/dia</p>
                     </div>
-                    <div className="mt-4 sm:mt-0 flex gap-2">
+                    <div className="mt-4 sm:mt-0 flex gap-3">
                       <Button
                         variant={emp.presence_morning ? 'secondary' : 'primary'}
                         size="sm"
                         disabled={!!emp.presence_morning}
                         onClick={() => handleRegisterClick(emp.employee_id, 'manha')}
-                        className={emp.presence_morning ? 'bg-green-50 text-green-700 border-green-200' : ''}
+                        className={emp.presence_morning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover'}
                       >
-                        {emp.presence_morning ? <><Check className="mr-1 h-4 w-4" /> Manhã</> : 'Manhã'}
+                        {emp.presence_morning ? <><Check className="mr-2 h-4 w-4" /> Manhã</> : 'Manhã'}
                       </Button>
                       <Button
                         variant={emp.presence_afternoon ? 'secondary' : 'primary'}
                         size="sm"
                         disabled={!!emp.presence_afternoon}
                         onClick={() => handleRegisterClick(emp.employee_id, 'tarde')}
-                        className={emp.presence_afternoon ? 'bg-green-50 text-green-700 border-green-200' : ''}
+                        className={emp.presence_afternoon ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover'}
                       >
-                        {emp.presence_afternoon ? <><Check className="mr-1 h-4 w-4" /> Tarde</> : 'Tarde'}
+                        {emp.presence_afternoon ? <><Check className="mr-2 h-4 w-4" /> Tarde</> : 'Tarde'}
                       </Button>
                     </div>
                   </div>
@@ -302,8 +302,8 @@ export default function DailyRegisterPage() {
       </div>
 
       <Modal isOpen={isCameraOpen} onClose={() => !isUploading && setIsCameraOpen(false)} title="Capturar Foto">
-        <div className="space-y-4">
-          <div className="overflow-hidden rounded-lg bg-black">
+        <div className="space-y-5 mt-2">
+          <div className="overflow-hidden rounded-lg bg-black border border-kivon-border">
             {/* @ts-ignore - react-webcam missing optional props in its typedef */}
             <Webcam
               audio={false}
@@ -313,9 +313,9 @@ export default function DailyRegisterPage() {
               className="w-full h-auto"
             />
           </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setIsCameraOpen(false)} disabled={isUploading}>Cancelar</Button>
-            <Button onClick={captureAndUpload} isLoading={isUploading}>
+          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
+            <Button variant="secondary" onClick={() => setIsCameraOpen(false)} disabled={isUploading} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">Cancelar</Button>
+            <Button onClick={captureAndUpload} isLoading={isUploading} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
               <Camera className="mr-2 h-4 w-4" /> Capturar e Salvar
             </Button>
           </div>

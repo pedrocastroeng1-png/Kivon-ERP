@@ -196,67 +196,69 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-kivon-border">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Obras</h1>
-          <p className="mt-1 text-sm text-gray-500">Gerencie as obras ativas e seus dados.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Obras</h1>
+          <p className="mt-2 text-sm text-kivon-text-sec">Gerencie as obras ativas e seus dados.</p>
         </div>
-        <Button onClick={() => openModal()} className="w-full sm:w-auto">
+        <Button onClick={() => openModal()} className="w-full sm:w-auto bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
           <Plus className="mr-2 h-4 w-4" /> Nova Obra
         </Button>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
-        <div className="mb-6 flex items-center rounded-md border border-gray-300 px-3">
-          <Search className="mr-2 h-5 w-5 text-gray-400" />
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl p-6">
+        <div className="mb-6 flex items-center rounded-lg border border-kivon-border bg-kivon-bg px-3 focus-within:ring-1 focus-within:ring-kivon-primary focus-within:border-kivon-primary transition-all">
+          <Search className="mr-2 h-5 w-5 text-kivon-text-sec" />
           <input
             type="text"
             placeholder="Pesquisar obras..."
-            className="w-full border-0 bg-transparent py-2 focus:ring-0 outline-none text-sm"
+            className="w-full border-0 bg-transparent py-2.5 text-white placeholder-kivon-text-sec focus:ring-0 outline-none text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-kivon-primary" />
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-10 text-gray-500">
+          <div className="text-center py-12 text-kivon-text-sec bg-kivon-bg/50 rounded-lg border border-kivon-border border-dashed">
             Nenhuma obra encontrada.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-500">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-700">
+          <div className="overflow-x-auto rounded-lg border border-kivon-border">
+            <table className="w-full text-left text-sm text-kivon-text-sec">
+              <thead className="bg-kivon-bg/80 text-xs uppercase text-kivon-text-sec">
                 <tr>
-                  <th className="px-6 py-3">Código</th>
-                  <th className="px-6 py-3">Nome</th>
-                  <th className="px-6 py-3">Cliente</th>
-                  <th className="px-6 py-3">Cidade</th>
-                  <th className="px-6 py-3">Início</th>
-                  <th className="px-6 py-3 text-right">Ações</th>
+                  <th className="px-6 py-4 font-semibold">Código</th>
+                  <th className="px-6 py-4 font-semibold">Nome</th>
+                  <th className="px-6 py-4 font-semibold">Cliente</th>
+                  <th className="px-6 py-4 font-semibold">Cidade</th>
+                  <th className="px-6 py-4 font-semibold">Início</th>
+                  <th className="px-6 py-4 font-semibold text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-kivon-border">
                 {filteredProjects.map((project) => (
-                  <tr key={project.id} className="border-b bg-white hover:bg-gray-50">
+                  <tr key={project.id} className="bg-kivon-card hover:bg-kivon-hover transition-colors group">
                     <td className="px-6 py-4">{project.code || '-'}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{project.name}</td>
+                    <td className="px-6 py-4 font-medium text-white">{project.name}</td>
                     <td className="px-6 py-4">{project.client_name || '-'}</td>
                     <td className="px-6 py-4">{project.city || '-'}</td>
                     <td className="px-6 py-4">{project.started_at ? format(parseISO(project.started_at), 'dd/MM/yyyy') : '-'}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => openAllocationModal(project.id)} className="mr-3 text-emerald-600 hover:text-emerald-900" title="Alocar Funcionários">
-                        <Users className="h-4 w-4 inline" />
-                      </button>
-                      <button onClick={() => openModal(project)} className="mr-3 text-indigo-600 hover:text-indigo-900" title="Editar">
-                        <Edit2 className="h-4 w-4 inline" />
-                      </button>
-                      <button onClick={() => handleDelete(project.id)} className="text-red-600 hover:text-red-900" title="Inativar">
-                        <Trash2 className="h-4 w-4 inline" />
-                      </button>
+                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openAllocationModal(project.id)} className="p-1 text-kivon-text-sec hover:text-emerald-400 transition-colors" title="Alocar Funcionários">
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => openModal(project)} className="p-1 text-kivon-text-sec hover:text-kivon-primary transition-colors" title="Editar">
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDelete(project.id)} className="p-1 text-kivon-text-sec hover:text-red-400 transition-colors" title="Inativar">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -267,47 +269,47 @@ export default function ProjectsPage() {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Editar Obra' : 'Nova Obra'}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-2">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Código" {...register('code')} />
-            <Input label="Nome da Obra" {...register('name')} error={errors.name?.message} />
+            <Input label="Código" {...register('code')} className="bg-kivon-bg border-kivon-border text-white" />
+            <Input label="Nome da Obra" {...register('name')} error={errors.name?.message} className="bg-kivon-bg border-kivon-border text-white" />
           </div>
-          <Input label="Cliente" {...register('client_name')} />
-          <Input label="Cidade" {...register('city')} />
-          <Input label="Endereço Completo" {...register('address')} />
+          <Input label="Cliente" {...register('client_name')} className="bg-kivon-bg border-kivon-border text-white" />
+          <Input label="Cidade" {...register('city')} className="bg-kivon-bg border-kivon-border text-white" />
+          <Input label="Endereço Completo" {...register('address')} className="bg-kivon-bg border-kivon-border text-white" />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Data de Início" type="date" {...register('started_at')} />
-            <Input label="Data de Término" type="date" {...register('finished_at')} />
+            <Input label="Data de Início" type="date" {...register('started_at')} className="bg-kivon-bg border-kivon-border text-white" style={{ colorScheme: 'dark' }} />
+            <Input label="Data de Término" type="date" {...register('finished_at')} className="bg-kivon-bg border-kivon-border text-white" style={{ colorScheme: 'dark' }} />
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" isLoading={isSubmitting}>Salvar</Button>
+          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
+            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">Cancelar</Button>
+            <Button type="submit" isLoading={isSubmitting} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">Salvar</Button>
           </div>
         </form>
       </Modal>
 
       <Modal isOpen={isAllocationModalOpen} onClose={() => setIsAllocationModalOpen(false)} title="Alocar Funcionários">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">Selecione os funcionários que farão parte desta obra.</p>
-          <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200">
+        <div className="space-y-5 mt-2">
+          <p className="text-sm text-kivon-text-sec">Selecione os funcionários que farão parte desta obra.</p>
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-kivon-border bg-kivon-bg divide-y divide-kivon-border">
             {employees.map(emp => (
-              <label key={emp.id} className="flex cursor-pointer items-center space-x-3 border-b p-3 hover:bg-gray-50">
+              <label key={emp.id} className="flex cursor-pointer items-center space-x-3 p-3 hover:bg-kivon-hover transition-colors">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-kivon-border bg-kivon-card text-kivon-primary focus:ring-kivon-primary focus:ring-offset-kivon-bg"
                   checked={allocatedEmployeeIds.includes(emp.id)}
                   onChange={() => toggleEmployee(emp.id)}
                 />
-                <span className="text-sm font-medium text-gray-900">{emp.full_name}</span>
+                <span className="text-sm font-medium text-white">{emp.full_name}</span>
               </label>
             ))}
             {employees.length === 0 && (
-              <p className="p-4 text-center text-sm text-gray-500">Nenhum funcionário ativo encontrado.</p>
+              <p className="p-4 text-center text-sm text-kivon-text-sec">Nenhum funcionário ativo encontrado.</p>
             )}
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setIsAllocationModalOpen(false)}>Cancelar</Button>
-            <Button type="button" isLoading={savingAllocation} onClick={saveAllocations}>Salvar Alocações</Button>
+          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
+            <Button type="button" variant="secondary" onClick={() => setIsAllocationModalOpen(false)} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">Cancelar</Button>
+            <Button type="button" isLoading={savingAllocation} onClick={saveAllocations} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">Salvar Alocações</Button>
           </div>
         </div>
       </Modal>

@@ -11,6 +11,7 @@ import ProjectsPage from '@/src/features/projects/pages/ProjectsPage';
 import EmployeesPage from '@/src/features/employees/pages/EmployeesPage';
 import UsersPage from '@/src/features/users/pages/UsersPage';
 import ReportsPage from '@/src/features/reports/pages/ReportsPage';
+import DownloadsPage from '@/src/features/downloads/pages/DownloadsPage';
 import { useAuth } from './providers/AuthProvider';
 
 // A simple wrapper to protect admin routes
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
             <UsersPage />
           </AdminRoute>
         ),
+      },
+      {
+        path: 'downloads',
+        element: <DownloadsPage />,
       },
     ],
   },

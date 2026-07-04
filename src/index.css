@@ -3,10 +3,18 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-kivon-bg: #090909;
+  --color-kivon-card: #151515;
+  --color-kivon-hover: #1F1F1F;
+  --color-kivon-text: #FFFFFF;
+  --color-kivon-text-sec: #B3B3B3;
+  --color-kivon-border: rgba(255, 255, 255, 0.08);
+  --color-kivon-primary: #D4AF37;
+  --color-kivon-primary-hover: #F3E5AB;
 }
 
 @layer base {
   body {
-    @apply antialiased text-slate-900 bg-slate-50 font-sans;
+    @apply antialiased text-kivon-text bg-kivon-bg font-sans;
   }
 }

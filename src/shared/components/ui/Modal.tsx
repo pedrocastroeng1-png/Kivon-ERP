@@ -14,13 +14,13 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-gray-900/50 p-4">
-      <div className={cn("relative w-full max-w-md rounded-lg bg-white shadow-xl", className)}>
-        <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className={cn("relative w-full max-w-md rounded-xl bg-kivon-card border border-kivon-border shadow-2xl scale-in-center duration-200", className)}>
+        <div className="flex items-center justify-between border-b border-kivon-border p-5">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="ml-auto inline-flex items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900"
+            className="ml-auto inline-flex items-center rounded-lg bg-transparent p-1.5 text-kivon-text-sec hover:bg-kivon-hover hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>

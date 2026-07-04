@@ -128,9 +128,20 @@ export default function ReportsPage() {
         const value = diarias * g.base_rate;
         tReais += value;
         
-        let finalStatus = Array.from(statuses).join(' / ');
-        if (countPresente > 0 && countPresente === g.records.length) {
-          finalStatus = 'PRESENTE';
+        let finalStatus = '';
+        const morning = g.records.find((r: any) => r.shift === 'manha');
+        const afternoon = g.records.find((r: any) => r.shift === 'tarde');
+
+        if (morning && afternoon) {
+          if (morning.status === afternoon.status) {
+            finalStatus = `${morning.status} (Manhã e Tarde)`;
+          } else {
+            finalStatus = `${morning.status} (Manhã) / ${afternoon.status} (Tarde)`;
+          }
+        } else if (morning) {
+          finalStatus = `${morning.status} (Manhã)`;
+        } else if (afternoon) {
+          finalStatus = `${afternoon.status} (Tarde)`;
         }
 
         return {
@@ -246,41 +257,43 @@ export default function ReportsPage() {
   }
 
   function getStatusBadgeClass(status: string) {
-    if (status.includes('PRESENTE')) return 'bg-green-50 text-green-700 ring-green-600/20';
-    if (status.includes('FALTOU')) return 'bg-red-50 text-red-700 ring-red-600/20';
-    if (status.includes('ATESTADO')) return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
-    if (status.includes('FÉRIAS')) return 'bg-blue-50 text-blue-800 ring-blue-600/20';
-    if (status.includes('FOLGA')) return 'bg-purple-50 text-purple-800 ring-purple-600/20';
-    return 'bg-gray-50 text-gray-600 ring-gray-500/10';
+    if (status.includes('PRESENTE')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    if (status.includes('FALTOU')) return 'bg-red-500/10 text-red-400 border-red-500/20';
+    if (status.includes('ATESTADO')) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    if (status.includes('FÉRIAS')) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    if (status.includes('FOLGA')) return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    return 'bg-kivon-bg text-kivon-text-sec border-kivon-border';
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Relatório de Diárias</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="pb-6 border-b border-kivon-border">
+        <h1 className="text-3xl font-bold tracking-tight text-white">Relatório de Diárias</h1>
+        <p className="mt-2 text-sm text-kivon-text-sec">
           Acompanhamento consolidado de diárias e valores por obra ou funcionário.
         </p>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow space-y-4">
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl p-6 space-y-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input 
             label="Data Inicial" 
             type="date" 
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)} 
+            className="bg-kivon-bg border-kivon-border text-white" style={{ colorScheme: 'dark' }}
           />
           <Input 
             label="Data Final" 
             type="date" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)} 
+            className="bg-kivon-bg border-kivon-border text-white" style={{ colorScheme: 'dark' }}
           />
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Obra</label>
+            <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Obra</label>
             <select
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >
@@ -289,9 +302,9 @@ export default function ReportsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Funcionário</label>
+            <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Funcionário</label>
             <select
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
             >
@@ -301,15 +314,15 @@ export default function ReportsPage() {
           </div>
         </div>
         
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-          <Button onClick={generateReport} isLoading={loading}>Gerar Relatório</Button>
-          <Button variant="secondary" onClick={exportCSV} disabled={data.length === 0 || loading}>
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-kivon-border">
+          <Button onClick={generateReport} isLoading={loading} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">Gerar Relatório</Button>
+          <Button variant="secondary" onClick={exportCSV} disabled={data.length === 0 || loading} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">
             <Download className="mr-2 h-4 w-4" /> CSV
           </Button>
-          <Button variant="secondary" onClick={exportExcel} disabled={data.length === 0 || loading}>
+          <Button variant="secondary" onClick={exportExcel} disabled={data.length === 0 || loading} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">
             <Download className="mr-2 h-4 w-4" /> Excel
           </Button>
-          <Button variant="secondary" onClick={exportPDF} disabled={data.length === 0 || loading}>
+          <Button variant="secondary" onClick={exportPDF} disabled={data.length === 0 || loading} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">
             <FileText className="mr-2 h-4 w-4" /> PDF
           </Button>
         </div>
@@ -319,54 +332,54 @@ export default function ReportsPage() {
         <div className="space-y-6">
           {/* Totals cards */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <div className="rounded-lg bg-indigo-50 p-4 border border-indigo-100">
-              <div className="text-sm font-medium text-indigo-800">Total de Diárias</div>
-              <div className="mt-1 text-2xl font-bold text-indigo-900">{totals.diarias.toString().replace('.', ',')}</div>
+            <div className="rounded-xl bg-indigo-500/10 p-4 border border-indigo-500/20 shadow-lg relative overflow-hidden">
+              <div className="text-sm font-medium text-indigo-400 relative z-10">Total de Diárias</div>
+              <div className="mt-2 text-2xl font-bold text-indigo-400 relative z-10">{totals.diarias.toString().replace('.', ',')}</div>
             </div>
-            <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
-              <div className="text-sm font-medium text-emerald-800">Valor Total</div>
-              <div className="mt-1 text-2xl font-bold text-emerald-900">R$ {totals.reais.toFixed(2).replace('.', ',')}</div>
+            <div className="rounded-xl bg-kivon-primary/10 p-4 border border-kivon-primary/20 shadow-lg relative overflow-hidden">
+              <div className="text-sm font-medium text-kivon-primary relative z-10">Valor Total</div>
+              <div className="mt-2 text-2xl font-bold text-kivon-primary relative z-10">R$ {totals.reais.toFixed(2).replace('.', ',')}</div>
             </div>
-            <div className="rounded-lg bg-white p-4 border border-gray-200 shadow-sm">
-              <div className="text-sm font-medium text-gray-500">Funcionários</div>
-              <div className="mt-1 text-2xl font-bold text-gray-900">{totals.employees}</div>
+            <div className="rounded-xl bg-kivon-card p-4 border border-kivon-border shadow-lg">
+              <div className="text-sm font-medium text-kivon-text-sec">Funcionários</div>
+              <div className="mt-2 text-2xl font-bold text-white">{totals.employees}</div>
             </div>
-            <div className="rounded-lg bg-red-50 p-4 border border-red-100">
-              <div className="text-sm font-medium text-red-800">Faltas</div>
-              <div className="mt-1 text-2xl font-bold text-red-900">{totals.faltas.toString().replace('.', ',')}</div>
+            <div className="rounded-xl bg-red-500/10 p-4 border border-red-500/20 shadow-lg relative overflow-hidden">
+              <div className="text-sm font-medium text-red-400 relative z-10">Faltas</div>
+              <div className="mt-2 text-2xl font-bold text-red-400 relative z-10">{totals.faltas.toString().replace('.', ',')}</div>
             </div>
-            <div className="rounded-lg bg-yellow-50 p-4 border border-yellow-100">
-              <div className="text-sm font-medium text-yellow-800">Atestados</div>
-              <div className="mt-1 text-2xl font-bold text-yellow-900">{totals.atestados.toString().replace('.', ',')}</div>
+            <div className="rounded-xl bg-amber-500/10 p-4 border border-amber-500/20 shadow-lg relative overflow-hidden">
+              <div className="text-sm font-medium text-amber-400 relative z-10">Atestados</div>
+              <div className="mt-2 text-2xl font-bold text-amber-400 relative z-10">{totals.atestados.toString().replace('.', ',')}</div>
             </div>
-            <div className="rounded-lg bg-blue-50 p-4 border border-blue-100">
-              <div className="text-sm font-medium text-blue-800">Férias/Folgas</div>
-              <div className="mt-1 text-2xl font-bold text-blue-900">{(totals.ferias + totals.folgas).toString().replace('.', ',')}</div>
+            <div className="rounded-xl bg-blue-500/10 p-4 border border-blue-500/20 shadow-lg relative overflow-hidden">
+              <div className="text-sm font-medium text-blue-400 relative z-10">Férias/Folgas</div>
+              <div className="mt-2 text-2xl font-bold text-blue-400 relative z-10">{(totals.ferias + totals.folgas).toString().replace('.', ',')}</div>
             </div>
           </div>
 
-          <div className="rounded-lg bg-white p-6 shadow overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-500">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-700">
+          <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl overflow-x-auto">
+            <table className="w-full text-left text-sm text-kivon-text-sec">
+              <thead className="bg-kivon-bg/80 text-xs uppercase text-kivon-text-sec">
                 <tr>
-                  <th className="px-6 py-3">Data</th>
-                  <th className="px-6 py-3">Funcionário</th>
-                  <th className="px-6 py-3">Obra</th>
-                  <th className="px-6 py-3 text-right">Diárias</th>
-                  <th className="px-6 py-3 text-right">Valor</th>
-                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-4 font-semibold">Data</th>
+                  <th className="px-6 py-4 font-semibold">Funcionário</th>
+                  <th className="px-6 py-4 font-semibold">Obra</th>
+                  <th className="px-6 py-4 font-semibold text-right">Diárias</th>
+                  <th className="px-6 py-4 font-semibold text-right">Valor</th>
+                  <th className="px-6 py-4 font-semibold text-center">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-kivon-border">
                 {data.map((row) => (
-                  <tr key={row.key} className="border-b bg-white hover:bg-gray-50">
+                  <tr key={row.key} className="bg-kivon-card hover:bg-kivon-hover transition-colors">
                     <td className="px-6 py-4">{format(parseISO(row.presence_date), 'dd/MM/yyyy')}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{row.employee_name}</td>
+                    <td className="px-6 py-4 font-medium text-white">{row.employee_name}</td>
                     <td className="px-6 py-4">{row.project_name}</td>
                     <td className="px-6 py-4 text-right">{row.diarias.toString().replace('.', ',')}</td>
-                    <td className="px-6 py-4 text-right">R$ {row.value.toFixed(2).replace('.', ',')}</td>
+                    <td className="px-6 py-4 text-right font-medium text-emerald-400">R$ {row.value.toFixed(2).replace('.', ',')}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${getStatusBadgeClass(row.status)}`}>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getStatusBadgeClass(row.status)}`}>
                         {row.status}
                       </span>
                     </td>

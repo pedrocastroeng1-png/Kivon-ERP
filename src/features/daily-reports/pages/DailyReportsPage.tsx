@@ -152,9 +152,20 @@ export default function DailyReportsPage() {
         sTotalDiarias += diarias;
         sValorTotal += valor;
 
-        let finalStatus = Array.from(statuses).join(' / ');
-        if (countPresente > 0 && countPresente === groupRecords.length) {
-          finalStatus = 'PRESENTE';
+        let finalStatus = '';
+        const morning = groupRecords.find(r => r.shift === 'manha');
+        const afternoon = groupRecords.find(r => r.shift === 'tarde');
+
+        if (morning && afternoon) {
+          if (morning.status === afternoon.status) {
+            finalStatus = `${morning.status} (Manhã e Tarde)`;
+          } else {
+            finalStatus = `${morning.status} (Manhã) / ${afternoon.status} (Tarde)`;
+          }
+        } else if (morning) {
+          finalStatus = `${morning.status} (Manhã)`;
+        } else if (afternoon) {
+          finalStatus = `${afternoon.status} (Tarde)`;
         }
 
         // Get the photo (prefer morning if exists, else whatever)
@@ -193,12 +204,12 @@ export default function DailyReportsPage() {
   }
 
   function getStatusBadgeClass(status: string) {
-    if (status.includes('PRESENTE')) return 'bg-green-50 text-green-700 ring-green-600/20';
-    if (status.includes('FALTOU')) return 'bg-red-50 text-red-700 ring-red-600/20';
-    if (status.includes('ATESTADO')) return 'bg-yellow-50 text-yellow-800 ring-yellow-600/20';
-    if (status.includes('FÉRIAS')) return 'bg-blue-50 text-blue-800 ring-blue-600/20';
-    if (status.includes('FOLGA')) return 'bg-purple-50 text-purple-800 ring-purple-600/20';
-    return 'bg-gray-50 text-gray-600 ring-gray-500/10';
+    if (status.includes('PRESENTE')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    if (status.includes('FALTOU')) return 'bg-red-500/10 text-red-400 border-red-500/20';
+    if (status.includes('ATESTADO')) return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    if (status.includes('FÉRIAS')) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    if (status.includes('FOLGA')) return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    return 'bg-kivon-bg text-kivon-text-sec border-kivon-border';
   }
 
   // Filter records with photos to allow navigation
@@ -224,25 +235,26 @@ export default function DailyReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Fechamento Diário</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="pb-6 border-b border-kivon-border">
+        <h1 className="text-3xl font-bold tracking-tight text-white">Fechamento Diário</h1>
+        <p className="mt-2 text-sm text-kivon-text-sec">
           Acompanhamento e fechamento diário dos registros individuais.
         </p>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow space-y-4">
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl p-6 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input 
             label="Data" 
             type="date" 
             value={dateFilter} 
             onChange={(e) => setDateFilter(e.target.value)} 
+            className="bg-kivon-bg border-kivon-border text-white" style={{ colorScheme: 'dark' }}
           />
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Obra</label>
+            <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Obra</label>
             <select
-              className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >
@@ -256,97 +268,103 @@ export default function DailyReportsPage() {
       {/* Summary Cards */}
       {!loading && data.length > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-          <div className="rounded-lg bg-white p-3 border border-gray-200 shadow-sm text-center">
-            <div className="text-xs font-medium text-gray-500">Previstos</div>
-            <div className="mt-1 text-xl font-bold text-gray-900">{summary.previstos}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-kivon-border shadow-lg text-center">
+            <div className="text-xs font-medium text-kivon-text-sec">Previstos</div>
+            <div className="mt-2 text-xl font-bold text-white">{summary.previstos}</div>
           </div>
-          <div className="rounded-lg bg-green-50 p-3 border border-green-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-green-800">Presentes</div>
-            <div className="mt-1 text-xl font-bold text-green-900">{summary.presentes.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-emerald-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-emerald-500/5"></div>
+            <div className="text-xs font-medium text-emerald-400 relative z-10">Presentes</div>
+            <div className="mt-2 text-xl font-bold text-emerald-400 relative z-10">{summary.presentes.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-red-50 p-3 border border-red-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-red-800">Faltas</div>
-            <div className="mt-1 text-xl font-bold text-red-900">{summary.faltas.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-red-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-red-500/5"></div>
+            <div className="text-xs font-medium text-red-400 relative z-10">Faltas</div>
+            <div className="mt-2 text-xl font-bold text-red-400 relative z-10">{summary.faltas.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-yellow-50 p-3 border border-yellow-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-yellow-800">Atestados</div>
-            <div className="mt-1 text-xl font-bold text-yellow-900">{summary.atestados.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-amber-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-amber-500/5"></div>
+            <div className="text-xs font-medium text-amber-400 relative z-10">Atestados</div>
+            <div className="mt-2 text-xl font-bold text-amber-400 relative z-10">{summary.atestados.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-blue-50 p-3 border border-blue-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-blue-800">Férias</div>
-            <div className="mt-1 text-xl font-bold text-blue-900">{summary.ferias.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-blue-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-blue-500/5"></div>
+            <div className="text-xs font-medium text-blue-400 relative z-10">Férias</div>
+            <div className="mt-2 text-xl font-bold text-blue-400 relative z-10">{summary.ferias.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-purple-50 p-3 border border-purple-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-purple-800">Folgas</div>
-            <div className="mt-1 text-xl font-bold text-purple-900">{summary.folgas.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-purple-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-purple-500/5"></div>
+            <div className="text-xs font-medium text-purple-400 relative z-10">Folgas</div>
+            <div className="mt-2 text-xl font-bold text-purple-400 relative z-10">{summary.folgas.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-indigo-50 p-3 border border-indigo-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-indigo-800">Tot. Diárias</div>
-            <div className="mt-1 text-xl font-bold text-indigo-900">{summary.totalDiarias.toString().replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-card p-4 border border-indigo-500/20 shadow-lg text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-indigo-500/5"></div>
+            <div className="text-xs font-medium text-indigo-400 relative z-10">Tot. Diárias</div>
+            <div className="mt-2 text-xl font-bold text-indigo-400 relative z-10">{summary.totalDiarias.toString().replace('.', ',')}</div>
           </div>
-          <div className="rounded-lg bg-emerald-50 p-3 border border-emerald-100 shadow-sm text-center">
-            <div className="text-xs font-medium text-emerald-800">Valor Total</div>
-            <div className="mt-1 text-lg font-bold text-emerald-900">R$ {summary.valorTotal.toFixed(2).replace('.', ',')}</div>
+          <div className="rounded-xl bg-kivon-primary/10 p-4 border border-kivon-primary/20 shadow-lg text-center relative overflow-hidden">
+            <div className="text-xs font-medium text-kivon-primary relative z-10">Valor Total</div>
+            <div className="mt-2 text-lg font-bold text-kivon-primary relative z-10">R$ {summary.valorTotal.toFixed(2).replace('.', ',')}</div>
           </div>
         </div>
       )}
 
-      <div className="rounded-lg bg-white shadow overflow-hidden">
+      <div className="rounded-xl bg-kivon-card border border-kivon-border shadow-xl overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-kivon-primary" />
           </div>
         ) : data.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
+          <div className="text-center py-20 text-kivon-text-sec">
             Nenhum registro encontrado para esta data.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-500">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-700 border-b">
+            <table className="w-full text-left text-sm text-kivon-text-sec">
+              <thead className="bg-kivon-bg/80 text-xs uppercase text-kivon-text-sec">
                 <tr>
-                  <th className="px-6 py-3 w-16">Foto</th>
-                  <th className="px-6 py-3">Funcionário</th>
-                  <th className="px-6 py-3">Cargo</th>
-                  <th className="px-6 py-3">Obra</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-right">Diária</th>
-                  <th className="px-6 py-3 text-right">Valor</th>
-                  <th className="px-6 py-3">Registro</th>
-                  <th className="px-6 py-3">Registrado por</th>
+                  <th className="px-6 py-4 font-semibold w-16">Foto</th>
+                  <th className="px-6 py-4 font-semibold">Funcionário</th>
+                  <th className="px-6 py-4 font-semibold">Cargo</th>
+                  <th className="px-6 py-4 font-semibold">Obra</th>
+                  <th className="px-6 py-4 font-semibold text-center">Status</th>
+                  <th className="px-6 py-4 font-semibold text-right">Diária</th>
+                  <th className="px-6 py-4 font-semibold text-right">Valor</th>
+                  <th className="px-6 py-4 font-semibold">Registro</th>
+                  <th className="px-6 py-4 font-semibold">Registrado por</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-kivon-border">
                 {data.map((row) => (
-                  <tr key={row.employee_id} className="bg-white hover:bg-gray-50">
-                    <td className="px-6 py-2">
+                  <tr key={row.employee_id} className="bg-kivon-card hover:bg-kivon-hover transition-colors">
+                    <td className="px-6 py-3">
                       {row.photo_url ? (
                         <img 
                           src={row.photo_url} 
                           alt="Foto" 
-                          className="h-10 w-10 rounded-md object-cover cursor-pointer border border-gray-200 hover:opacity-80 transition"
+                          className="h-10 w-10 rounded-md object-cover cursor-pointer border border-kivon-border hover:opacity-80 transition"
                           onClick={() => openPhoto(row.photo_url!)}
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center text-gray-400">
-                          <ImageIcon className="h-5 w-5" />
+                        <div className="h-10 w-10 rounded-md bg-kivon-bg border border-kivon-border flex items-center justify-center text-kivon-text-sec">
+                          <ImageIcon className="h-5 w-5 opacity-50" />
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-3 font-medium text-gray-900">{row.employee_name}</td>
-                    <td className="px-6 py-3">{row.job_role}</td>
-                    <td className="px-6 py-3">{row.project_name}</td>
-                    <td className="px-6 py-3 text-center">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${getStatusBadgeClass(row.status)}`}>
+                    <td className="px-6 py-4 font-medium text-white">{row.employee_name}</td>
+                    <td className="px-6 py-4">{row.job_role}</td>
+                    <td className="px-6 py-4">{row.project_name}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${getStatusBadgeClass(row.status)}`}>
                         {row.status}
                       </span>
                     </td>
-                    <td className="px-6 py-3 text-right">{row.diarias.toString().replace('.', ',')}</td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-6 py-4 text-right">{row.diarias.toString().replace('.', ',')}</td>
+                    <td className="px-6 py-4 text-right font-medium text-emerald-400">
                       R$ {row.valor.toFixed(2).replace('.', ',')}
                     </td>
-                    <td className="px-6 py-3">{format(new Date(row.captured_at), 'HH:mm')}</td>
-                    <td className="px-6 py-3">{row.registered_by}</td>
+                    <td className="px-6 py-4 text-kivon-text-sec">{format(new Date(row.captured_at), 'HH:mm')}</td>
+                    <td className="px-6 py-4 text-kivon-text-sec">{row.registered_by}</td>
                   </tr>
                 ))}
               </tbody>

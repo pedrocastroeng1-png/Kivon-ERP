@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>KIVON ERP</title>
+    <meta name="description" content="KIVON ERP - Sistema Integrado de Gestão" />
+    <meta property="og:title" content="KIVON ERP" />
+    <meta property="og:description" content="KIVON ERP - Sistema Integrado de Gestão" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f172a" />
+    <style>
+      #kivon-splash {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #0f172a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        transition: opacity 0.5s ease-out;
+      }
+      #kivon-splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .kivon-logo-container {
+        width: 80px; height: 80px;
+        background-color: #6366f1; /* indigo-500 */
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        animation: pulseLogo 2s infinite;
+      }
+      .kivon-logo-text {
+        margin-top: 24px;
+        color: white;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      .kivon-loading-bar {
+        width: 120px;
+        height: 4px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        margin-top: 16px;
+        overflow: hidden;
+      }
+      .kivon-loading-progress {
+        width: 30%;
+        height: 100%;
+        background-color: #818cf8;
+        border-radius: 4px;
+        animation: loadProgress 1.5s infinite ease-in-out;
+      }
+      @keyframes pulseLogo {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+      }
+      @keyframes loadProgress {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(400%); }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-D5PvOCZe.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dm514qGC.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+  <body>
+    <div id="kivon-splash">
+      <div class="kivon-logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+          <path d="M3 12A9 3 0 0 0 21 12"></path>
+        </svg>
+      </div>
+      <div class="kivon-logo-text">KIVON ERP</div>
+      <div class="kivon-loading-bar">
+        <div class="kivon-loading-progress"></div>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script>
+      // Remove splash screen when React mounts
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const splash = document.getElementById('kivon-splash');
+          if (splash) {
+            splash.classList.add('hidden');
+            setTimeout(() => splash.remove(), 500);
+          }
+        }, 1000); // 1s minimal display for elegance
+      });
+    </script>
+  </body>
+</html>
+

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '@/src/shared/components/ui/Input';
+import { Button } from '@/src/shared/components/ui/Button';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
@@ -37,45 +39,51 @@ export default function UpdatePasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-kivon-bg px-4 relative overflow-hidden">
+      {/* Background Ornaments */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-kivon-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-kivon-primary/10 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-kivon-card border border-kivon-border p-10 shadow-2xl relative z-10 backdrop-blur-xl">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+          <img src="/logo-kivon-white.png" alt="KIVON ERP" className="h-16 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold tracking-tight text-white">
             Atualizar Senha
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-kivon-text-sec">
             Defina sua nova senha para acessar o KIVON ERP.
           </p>
         </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleUpdate}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
               {error}
             </div>
           )}
+
           <div className="space-y-4">
-            <div>
-              <label className="sr-only" htmlFor="password">Nova Senha</label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                placeholder="Nova senha (mínimo 6 caracteres)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+            <Input
+              label="Nova Senha"
+              id="password"
+              type="password"
+              required
+              minLength={6}
+              className="bg-kivon-bg border-kivon-border text-white"
+              placeholder="Nova senha (mínimo 6 caracteres)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
+
           <div>
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+              className="w-full bg-kivon-primary hover:bg-kivon-primary-hover text-black font-semibold shadow-[0_0_20px_rgba(212,175,55,0.2)]"
             >
               {loading ? 'Salvando...' : 'Salvar Senha e Entrar'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
