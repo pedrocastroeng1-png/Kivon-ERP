@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -31,76 +32,88 @@ export default function DashboardPage() {
   async function fetchStats() {
     setLoading(true);
     
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const startOfMonth = format(new Date(new Date().setDate(1)), 'yyyy-MM-dd');
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const startOfMonth = format(new Date(new Date().setDate(1)), 'yyyy-MM-dd');
 
-    // Counts
-    const { count: empCount } = await supabase.from('employees').select('*', { count: 'exact', head: true }).eq('active', true);
-    const { count: projCount } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('active', true);
-    
-    // Fetch presences to calculate total values
-    const { data: presences } = await supabase
-      .from('presence')
-      .select('presence_date, status, shift, employees(job_roles(daily_rate))')
-      .gte('presence_date', startOfMonth)
-      .eq('active', true);
-
-    let pTodayCount = 0;
-    let pMonthCount = 0;
-    let valHoje = 0;
-    let valMes = 0;
-
-    if (presences) {
-      presences.forEach((p: any) => {
-        if (p.status === 'PRESENTE') {
-          pMonthCount++;
-          const rate = p.employees?.job_roles?.daily_rate || 0;
-          valMes += (rate * 0.5);
-
-          if (p.presence_date === today) {
-            pTodayCount++;
-            valHoje += (rate * 0.5);
-          }
-        }
-      });
-    }
-
-    setStats({
-      activeEmployees: empCount || 0,
-      activeProjects: projCount || 0,
-      presenceToday: pTodayCount,
-      presenceMonth: pMonthCount,
-      diariasHoje: valHoje,
-      diariasMes: valMes
-    });
-
-    // Chart Data (Last 7 days presence)
-    if (presences) {
-      const agg: Record<string, { manha: number, tarde: number }> = {};
+      // Counts
+      const { count: empCount, error: empErr } = await supabase.from('employees').select('*', { count: 'exact', head: true }).eq('active', true);
+      const { count: projCount, error: projErr } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('active', true);
       
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        agg[dateStr] = { manha: 0, tarde: 0 };
+      if (empErr) console.error("Error fetching employees count:", empErr);
+      if (projErr) console.error("Error fetching projects count:", projErr);
+
+      // Fetch presences to calculate total values
+      const { data: presences, error: presErr } = await supabase
+        .from('presence')
+        .select('presence_date, status, shift, employees(job_roles(daily_rate))')
+        .gte('presence_date', startOfMonth)
+        .eq('active', true);
+
+      if (presErr) {
+        throw presErr;
       }
 
-      presences.forEach((p: any) => {
-        if (agg[p.presence_date] && p.status === 'PRESENTE') {
-          if (p.shift === 'manha') agg[p.presence_date].manha += 0.5;
-          if (p.shift === 'tarde') agg[p.presence_date].tarde += 0.5;
-        }
+      let pTodayCount = 0;
+      let pMonthCount = 0;
+      let valHoje = 0;
+      let valMes = 0;
+
+      if (presences) {
+        presences.forEach((p: any) => {
+          if (p.status === 'PRESENTE') {
+            pMonthCount++;
+            const rate = p.employees?.job_roles?.daily_rate || 0;
+            valMes += (rate * 0.5);
+
+            if (p.presence_date === today) {
+              pTodayCount++;
+              valHoje += (rate * 0.5);
+            }
+          }
+        });
+      }
+
+      setStats({
+        activeEmployees: empCount || 0,
+        activeProjects: projCount || 0,
+        presenceToday: pTodayCount,
+        presenceMonth: pMonthCount,
+        diariasHoje: valHoje,
+        diariasMes: valMes
       });
 
-      const formattedChartData = Object.keys(agg).map(date => ({
-        name: format(new Date(date), 'dd/MM'),
-        Manhã: agg[date].manha,
-        Tarde: agg[date].tarde,
-      }));
-      setChartData(formattedChartData);
+      // Chart Data (Last 7 days presence)
+      if (presences) {
+        const agg: Record<string, { manha: number, tarde: number }> = {};
+        
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          agg[dateStr] = { manha: 0, tarde: 0 };
+        }
+
+        presences.forEach((p: any) => {
+          if (agg[p.presence_date] && p.status === 'PRESENTE') {
+            if (p.shift === 'manha') agg[p.presence_date].manha += 0.5;
+            if (p.shift === 'tarde') agg[p.presence_date].tarde += 0.5;
+          }
+        });
+
+        const formattedChartData = Object.keys(agg).map(date => ({
+          name: format(new Date(date), 'dd/MM'),
+          Manhã: agg[date].manha,
+          Tarde: agg[date].tarde,
+        }));
+        setChartData(formattedChartData);
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar os dados do dashboard:', err);
+      toast.error(err.message || 'Erro ao carregar o dashboard.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }
 
   return (

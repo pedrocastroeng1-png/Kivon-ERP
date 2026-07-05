@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
 import { Button } from '@/src/shared/components/ui/Button';
@@ -44,15 +45,23 @@ export default function UsersPage() {
 
   async function fetchUsers() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, full_name, active, profiles(name, code)')
-      .order('full_name');
-    
-    if (!error && data) {
-      setUsers(data as any);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*, profiles(name, code)')
+        .order('full_name');
+      
+      if (error) throw error;
+      if (data) {
+        setUsers(data);
+      }
+    } catch (err: any) {
+      console.error('Erro ao buscar usuários:', err);
+      toast.error(err.message || 'Erro ao carregar usuários.');
+      setUsers([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function openModal(user?: UserProfile) {

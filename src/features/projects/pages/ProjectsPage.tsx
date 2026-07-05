@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
 import { Button } from '@/src/shared/components/ui/Button';
@@ -65,26 +66,40 @@ export default function ProjectsPage() {
 
   async function fetchProjects() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('active', true)
-      .order('name');
-    
-    if (!error && data) {
-      setProjects(data);
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('active', true)
+        .order('name');
+      
+      if (error) throw error;
+      if (data) {
+        setProjects(data);
+      }
+    } catch (err: any) {
+      console.error('Erro ao buscar obras:', err);
+      toast.error(err.message || 'Erro ao carregar obras.');
+      setProjects([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function fetchEmployees() {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('id, full_name')
-      .eq('active', true)
-      .order('full_name');
-    if (!error && data) {
-      setEmployees(data);
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, full_name')
+        .eq('active', true)
+        .order('full_name');
+      if (error) throw error;
+      if (data) {
+        setEmployees(data);
+      }
+    } catch (err: any) {
+      console.error('Erro ao buscar funcionários:', err);
+      toast.error(err.message || 'Erro ao carregar funcionários.');
     }
   }
 

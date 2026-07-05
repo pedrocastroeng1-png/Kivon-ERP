@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
 import { Button } from '@/src/shared/components/ui/Button';

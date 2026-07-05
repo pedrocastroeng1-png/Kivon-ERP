@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
 import { Button } from '@/src/shared/components/ui/Button';
@@ -46,110 +47,98 @@ export default function DailyRegisterPage() {
     }
   }, [selectedProjectId]);
 
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   async function fetchProjects() {
-    const { data } = await supabase
-      .from('projects')
-      .select('id, name')
-      .eq('active', true)
-      .order('name');
-    if (data) setProjects(data);
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('active', true)
+        .order('name');
+      if (error) throw error;
+      if (data) {
+        setProjects(data);
+      }
+    } catch (err: any) {
+      console.error('Erro ao buscar obras:', err);
+      toast.error(err.message || 'Erro ao carregar obras.');
+    }
   }
 
   async function loadEmployeesForProject(projectId: string) {
     setLoading(true);
-    
-    // 1. Get employees from RPC
-    const { data: emps, error: rpcError } = await supabase
-      .rpc('obter_funcionarios_da_obra', { p_project_id: projectId });
+    try {
+      const { data: projEmps, error: empErr } = await supabase
+        .from('project_employees')
+        .select('employee_id, employees(full_name, job_roles(name, daily_rate))')
+        .eq('project_id', projectId)
+        .eq('active', true);
+      
+      if (empErr) throw empErr;
 
-    if (rpcError || !emps) {
-      console.error(rpcError);
+      const { data: presences, error: presErr } = await supabase
+        .from('presence')
+        .select('employee_id, shift, photo_id')
+        .eq('project_id', projectId)
+        .eq('presence_date', today)
+        .eq('active', true);
+
+      if (presErr) throw presErr;
+
+      const mapped = (projEmps || []).map((pe: any) => {
+        const empPresences = (presences || []).filter(p => p.employee_id === pe.employee_id);
+        const hasManha = empPresences.some(p => p.shift === 'manha');
+        const hasTarde = empPresences.some(p => p.shift === 'tarde');
+        return {
+          employee_id: pe.employee_id,
+          full_name: pe.employees.full_name,
+          job_role_name: pe.employees.job_roles.name,
+          daily_rate: pe.employees.job_roles.daily_rate,
+          presence_morning: hasManha,
+          presence_afternoon: hasTarde,
+        };
+      }).sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+      setEmployees(mapped);
+    } catch (err: any) {
+      console.error('Erro ao carregar funcionários:', err);
+      toast.error(err.message || 'Erro ao carregar funcionários.');
+      setEmployees([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // 2. Get today's presence for this project
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const { data: presences } = await supabase
-      .from('presence')
-      .select('employee_id, shift, photo_id')
-      .eq('project_id', projectId)
-      .eq('presence_date', today)
-      .eq('active', true);
-
-    const presenceMap: Record<string, { manha?: any, tarde?: any }> = {};
-    if (presences) {
-      presences.forEach(p => {
-        if (!presenceMap[p.employee_id]) presenceMap[p.employee_id] = {};
-        if (p.shift === 'manha') presenceMap[p.employee_id].manha = p;
-        if (p.shift === 'tarde') presenceMap[p.employee_id].tarde = p;
-      });
-    }
-
-    // Merge
-    const merged = emps.map((e: any) => ({
-      ...e,
-      presence_morning: presenceMap[e.employee_id]?.manha,
-      presence_afternoon: presenceMap[e.employee_id]?.tarde,
-    }));
-
-    setEmployees(merged);
-    setLoading(false);
   }
 
   async function handleRegisterClick(employeeId: string, shift: 'manha' | 'tarde') {
-    const emp = employees.find(e => e.employee_id === employeeId);
-    if (!emp) return;
-
-    if (shift === 'manha' && !emp.presence_morning) {
-      // Check if photo exists for today
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data: photos } = await supabase
-        .from('presence_photos')
-        .select('id')
-        .eq('employee_id', employeeId)
-        .eq('project_id', selectedProjectId)
-        .eq('presence_date', today)
-        .eq('active', true)
-        .limit(1);
-
-      if (!photos || photos.length === 0) {
-        // Need photo
-        setPendingPresence({ employeeId, shift });
-        setIsCameraOpen(true);
-        return;
-      } else {
-        // Has photo, register directly
-        registerPresenceRPC(employeeId, shift, photos[0].id);
-        return;
-      }
-    }
-
-    if (shift === 'tarde') {
-      // Tarde does not need new photo
-      registerPresenceRPC(employeeId, shift);
+    if (shift === 'manha') {
+      setPendingPresence({ employeeId, shift });
+      setIsCameraOpen(true);
+    } else {
+      await registerPresenceRPC(employeeId, shift);
     }
   }
 
   async function registerPresenceRPC(employeeId: string, shift: 'manha' | 'tarde', photoId?: string) {
+    let finalPhotoId = photoId;
     try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      
-      let finalPhotoId = photoId;
-      if (!finalPhotoId && shift === 'tarde') {
-         const { data: photos } = await supabase
+      // If no photoId is passed, maybe the user uploaded one previously for today?
+      if (!finalPhotoId) {
+        const { data: existingPhotos, error: photoCheckErr } = await supabase
           .from('presence_photos')
           .select('id')
-          .eq('employee_id', employeeId)
           .eq('project_id', selectedProjectId)
+          .eq('employee_id', employeeId)
           .eq('presence_date', today)
-          .eq('active', true)
           .limit(1);
-         if (photos && photos.length > 0) finalPhotoId = photos[0].id;
+          
+        if (photoCheckErr) throw photoCheckErr;
+        
+        if (existingPhotos && existingPhotos.length > 0) {
+          finalPhotoId = existingPhotos[0].id;
+        }
       }
 
-      const { data: userSession } = await supabase.auth.getSession();
-      
       const { error } = await supabase.rpc('registrar_presenca', {
         p_project_id: selectedProjectId,
         p_employee_id: employeeId,
@@ -161,12 +150,11 @@ export default function DailyRegisterPage() {
       });
 
       if (error) throw error;
-      
-      // Reload
+      toast.success('Presença registrada com sucesso!');
       loadEmployeesForProject(selectedProjectId);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao registrar presença.');
+    } catch (err: any) {
+      console.error('Erro ao registrar presença:', err);
+      toast.error(err.message || 'Erro ao registrar presença.');
     }
   }
 
