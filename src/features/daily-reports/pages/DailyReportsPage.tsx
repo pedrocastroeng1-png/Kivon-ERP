@@ -7,6 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { Modal } from '@/src/shared/components/ui/Modal';
 import { useAuth } from '@/src/app/providers/AuthProvider';
 import { cn } from '@/src/shared/lib/utils';
+import { imageService } from '@/src/shared/services/ImageService';
 import toast from 'react-hot-toast';
 
 interface ProjectRecord {
@@ -56,8 +57,6 @@ interface DailyReportSummary {
   totalDiarias: number;
   valorTotal: number;
 }
-
-const PHOTO_SIGNED_URL_EXPIRATION = 300; // 5 minutos
 
 export default function DailyReportsPage() {
   const { profile } = useAuth();
@@ -131,27 +130,12 @@ export default function DailyReportsPage() {
 
       if (result) {
         const records = await Promise.all(result.map(async (row) => {
-          let photo_url = '';
+          let photo_url: string | null = '';
           let photo_error = false;
           if (row.presence_photos?.storage_path) {
-            try {
-              const { data, error } = await supabase.storage
-                .from('presence-photos')
-                .createSignedUrl(row.presence_photos.storage_path, PHOTO_SIGNED_URL_EXPIRATION);
-              
-              if (error) {
-                photo_error = true;
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Erro ao gerar signed URL da evidência', error);
-                }
-              } else if (data) {
-                photo_url = data.signedUrl;
-              }
-            } catch (err) {
+            photo_url = await imageService.getPresencePhoto(row.presence_photos.storage_path);
+            if (!photo_url) {
               photo_error = true;
-              if (process.env.NODE_ENV === 'development') {
-                console.error('Erro inesperado ao gerar signed URL', err);
-              }
             }
           }
           return { ...row, photo_url, photo_error };

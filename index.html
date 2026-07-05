@@ -23,46 +23,56 @@
         align-items: center;
         justify-content: center;
         z-index: 999999;
-        transition: opacity 0.5s ease-out;
+        transition: opacity 0.6s ease-out;
       }
       #kivon-splash.hidden {
         opacity: 0;
         pointer-events: none;
       }
       .kivon-logo-container {
-        width: 120px; height: 120px;
+        width: 240px;
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: pulseLogo 2s infinite;
+        opacity: 0;
+        animation: logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
       .kivon-logo-container img {
         width: 100%;
         height: auto;
       }
-      .kivon-loading-bar {
-        width: 120px;
+      .kivon-loading-bar-container {
+        width: 160px;
         height: 2px;
         background-color: rgba(255, 255, 255, 0.05);
         border-radius: 2px;
-        margin-top: 32px;
+        margin-top: 40px;
         overflow: hidden;
+        position: relative;
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out 0.8s forwards;
       }
       .kivon-loading-progress {
-        width: 30%;
-        height: 100%;
-        background-color: #D4AF37;
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        width: 40%;
+        background-color: rgba(255, 255, 255, 0.8);
         border-radius: 2px;
-        animation: loadProgress 1.5s infinite ease-in-out;
+        animation: minimalistProgress 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       }
-      @keyframes pulseLogo {
-        0% { transform: scale(0.95); opacity: 0.8; }
-        50% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(0.95); opacity: 0.8; }
+
+      @keyframes logoEntrance {
+        0% { transform: scale(0.98); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
       }
-      @keyframes loadProgress {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(400%); }
+      
+      @keyframes fadeIn {
+        to { opacity: 1; }
+      }
+
+      @keyframes minimalistProgress {
+        0% { left: -40%; }
+        100% { left: 100%; }
       }
     </style>
   </head>
@@ -71,7 +81,7 @@
       <div class="kivon-logo-container">
         <img src="/logo-kivon-white.png" alt="KIVON ERP" />
       </div>
-      <div class="kivon-loading-bar">
+      <div class="kivon-loading-bar-container">
         <div class="kivon-loading-progress"></div>
       </div>
     </div>
@@ -84,9 +94,9 @@
           const splash = document.getElementById('kivon-splash');
           if (splash) {
             splash.classList.add('hidden');
-            setTimeout(() => splash.remove(), 500);
+            setTimeout(() => splash.remove(), 600);
           }
-        }, 1000); // 1s minimal display for elegance
+        }, 1200); // 1.2s minimal display for elegance
       });
     </script>
   </body>

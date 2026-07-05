@@ -6,6 +6,7 @@ import { Modal } from '@/src/shared/components/ui/Modal';
 import { Loader2, Camera, Check, Search } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { format } from 'date-fns';
+import { imageService } from '@/src/shared/services/ImageService';
 
 interface Project {
   id: string;
@@ -173,12 +174,8 @@ export default function DailyRegisterPage() {
         const today = format(new Date(), 'yyyy-MM-dd');
         const fileName = `${selectedProjectId}/employees/${pendingPresence.employeeId}/${today}/${Date.now()}.jpg`;
 
-        // Upload to bucket
-        const { error: uploadError } = await supabase.storage
-          .from('presence-photos')
-          .upload(fileName, blob, { contentType: 'image/jpeg' });
-
-        if (uploadError) throw uploadError;
+        // Upload to bucket using ImageService
+        await imageService.uploadPresencePhoto(fileName, blob, 'image/jpeg');
 
         const { data: userSession } = await supabase.auth.getSession();
 

@@ -77,8 +77,8 @@ export function AppLayout() {
             
             <div className="flex shrink-0 items-center px-6 gap-3">
               <img src={logoUrl} alt="KIVON ERP" className="h-8 object-contain" onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                  (e.target as HTMLImageElement).src = '/logo-kivon-white.png';
+                  (e.target as HTMLImageElement).onerror = null;
                 }} />
               <div className="hidden h-8 w-8 rounded-lg bg-kivon-primary flex items-center justify-center">
                 <Database className="h-5 w-5 text-black" />
@@ -142,8 +142,8 @@ export function AppLayout() {
           <div className="flex flex-1 flex-col overflow-y-auto pt-6 pb-4">
             <div className="flex shrink-0 items-center px-6 gap-3 justify-center mb-2">
               <img src={logoUrl} alt="KIVON ERP" className="h-10 object-contain" onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                  (e.target as HTMLImageElement).src = '/logo-kivon-white.png';
+                  (e.target as HTMLImageElement).onerror = null;
                 }} />
               <div className="hidden h-10 w-10 rounded-lg bg-kivon-primary flex items-center justify-center">
                 <Database className="h-6 w-6 text-black" />

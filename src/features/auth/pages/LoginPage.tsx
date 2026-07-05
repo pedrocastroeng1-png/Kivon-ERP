@@ -53,7 +53,8 @@ export default function LoginPage() {
             alt="KIVON ERP" 
             className="h-24 object-contain mb-8 drop-shadow-md"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).src = '/logo-kivon-white.png';
+              (e.target as HTMLImageElement).onerror = null;
             }} 
           />
           <h2 className="text-[22px] font-semibold tracking-tight text-white/90 leading-snug">
