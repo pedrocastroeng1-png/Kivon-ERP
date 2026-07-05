@@ -1,73 +1,58 @@
-import { useEffect, useMemo } from 'react';
-import useSWR, { mutate } from 'swr';
-import { supabase } from '@/src/shared/lib/supabase';
+import { useMemo, useCallback } from 'react';
+import useSWRInfinite from 'swr/infinite';
+import { mutate } from 'swr';
 import { NotificationService } from '../services/NotificationService';
 import { useAuth } from '@/src/app/providers/AuthProvider';
 import { AppNotification } from '../types';
 import { useNotificationStore } from '../store/notificationStore';
+import { NOTIFICATIONS_CACHE_KEY } from '../providers/NotificationRealtimeProvider';
 
-const NOTIFICATIONS_CACHE_KEY = 'user_notifications';
+const PAGE_SIZE = 15;
 
 export function useNotifications() {
   const { user } = useAuth();
   const { activeFilter } = useNotificationStore();
 
-  // SWR Fetcher
-  const fetcher = async () => {
-    if (!user) return [];
-    return await NotificationService.fetchUserNotifications();
+  const getKey = (pageIndex: number, previousPageData: AppNotification[] | null) => {
+    if (!user) return null; // Unauthenticated
+    if (previousPageData && !previousPageData.length) return null; // Reached the end
+    return `${NOTIFICATIONS_CACHE_KEY}?page=${pageIndex}&limit=${PAGE_SIZE}`; // SWR key
   };
 
-  // 1. Data Fetching & Caching (SWR)
-  const { data: notifications = [], error, isLoading, mutate: mutateLocal } = useSWR<AppNotification[]>(
-    user ? NOTIFICATIONS_CACHE_KEY : null,
+  const fetcher = async (url: string) => {
+    const params = new URLSearchParams(url.split('?')[1]);
+    const page = parseInt(params.get('page') || '0', 10);
+    const limit = parseInt(params.get('limit') || '15', 10);
+    return await NotificationService.fetchUserNotifications(page, limit);
+  };
+
+  const { data, error, isLoading, isValidating, size, setSize, mutate: mutateLocal } = useSWRInfinite<AppNotification[]>(
+    getKey,
     fetcher,
     {
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 30000, // 30 seconds
+      dedupingInterval: 30000,
     }
   );
 
-  // 2. Realtime Synchronization
-  useEffect(() => {
-    if (!user) return;
+  const notifications = useMemo(() => {
+    return data ? data.flat() : [];
+  }, [data]);
 
-    // We listen to both notifications and notification_reads tables
-    // to keep the view 'vw_user_notifications' perfectly synced
-    const channel = supabase.channel('smart_center_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications' },
-        () => {
-          // Revalidate SWR cache globally
-          mutate(NOTIFICATIONS_CACHE_KEY);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notification_reads' },
-        (payload) => {
-          // Only revalidate if it affects the current user
-          if (payload.new && 'user_id' in payload.new && payload.new.user_id === user.id) {
-            mutate(NOTIFICATIONS_CACHE_KEY);
-          } else if (payload.old && 'user_id' in payload.old && payload.old.user_id === user.id) {
-             mutate(NOTIFICATIONS_CACHE_KEY);
-          }
-        }
-      )
-      .subscribe();
+  const isEmpty = data?.[0]?.length === 0;
+  const isReachingEnd = isEmpty || (data && data[data.length - 1]?.length < PAGE_SIZE);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+  const loadMore = useCallback(() => {
+    if (!isReachingEnd && !isValidating) {
+      setSize(size + 1);
+    }
+  }, [isReachingEnd, isValidating, size, setSize]);
 
-  // 3. Derived State & Filtering
+  // Derived State & Filtering
   const filteredNotifications = useMemo(() => {
     let result = notifications;
 
-    // Apply store filters
     if (activeFilter === 'UNREAD') {
       result = result.filter((n) => !n.is_read);
     } else if (activeFilter !== 'ALL') {
@@ -85,22 +70,27 @@ export function useNotifications() {
     return notifications.filter((n) => n.requires_acknowledgment && !n.is_acknowledged).length;
   }, [notifications]);
 
-  // 4. Actions with Optimistic Updates
+  // Actions with Optimistic Updates for SWR Infinite (requires mutating the 2D array)
+  const mutateItem = (id: string, updater: (item: AppNotification) => AppNotification) => {
+    mutateLocal(
+      (currentData) => {
+        if (!currentData) return currentData;
+        return currentData.map((pageData) =>
+          pageData.map((n) => (n.id === id ? updater(n) : n))
+        );
+      },
+      false
+    );
+  };
+
   const markAsRead = async (id: string) => {
     if (!user) return;
     
-    // Optimistic Update
-    mutateLocal(
-      (current) => 
-        current?.map((n) => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n)),
-      false // don't revalidate immediately
-    );
+    mutateItem(id, (n) => ({ ...n, is_read: true, read_at: new Date().toISOString() }));
 
     try {
       await NotificationService.markAsRead(id);
-      // Actual revalidation happens via realtime subscription or next focus
     } catch (err) {
-      // Revert on failure by triggering a revalidation
       mutateLocal();
       throw err;
     }
@@ -109,11 +99,13 @@ export function useNotifications() {
   const acknowledge = async (id: string) => {
     if (!user) return;
 
-    mutateLocal(
-      (current) => 
-        current?.map((n) => (n.id === id ? { ...n, is_read: true, is_acknowledged: true, read_at: new Date().toISOString(), acknowledged_at: new Date().toISOString() } : n)),
-      false
-    );
+    mutateItem(id, (n) => ({ 
+      ...n, 
+      is_read: true, 
+      is_acknowledged: true, 
+      read_at: n.read_at || new Date().toISOString(), 
+      acknowledged_at: new Date().toISOString() 
+    }));
 
     try {
       await NotificationService.acknowledge(id);
@@ -127,8 +119,12 @@ export function useNotifications() {
     if (!user) return;
     
     mutateLocal(
-      (current) => 
-        current?.map((n) => ({ ...n, is_read: true, read_at: n.read_at || new Date().toISOString() })),
+      (currentData) => {
+        if (!currentData) return currentData;
+        return currentData.map((pageData) =>
+          pageData.map((n) => ({ ...n, is_read: true, read_at: n.read_at || new Date().toISOString() }))
+        );
+      },
       false
     );
 
@@ -143,10 +139,13 @@ export function useNotifications() {
   const resolve = async (id: string) => {
     if (!user) return;
     
-    // For resolution, optimistic UI is slightly harder since it might remove it from view
     mutateLocal(
-      (current) => 
-        current?.filter((n) => n.id !== id),
+      (currentData) => {
+        if (!currentData) return currentData;
+        return currentData.map((pageData) =>
+          pageData.filter((n) => n.id !== id)
+        );
+      },
       false
     );
 
@@ -164,7 +163,11 @@ export function useNotifications() {
     unreadCount,
     unacknowledgedCount,
     isLoading,
+    isValidating,
+    isReachingEnd,
+    isEmpty,
     error,
+    loadMore,
     markAsRead,
     acknowledge,
     markAllAsRead,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { SmartCenterDrawer } from '@/src/features/smart-center/components/SmartCenterDrawer';
-import { useSmartCenter } from '@/src/features/smart-center/hooks/useSmartCenter';
+import { SmartCenterHeaderBadge } from '@/src/features/smart-center/components/SmartCenterHeaderBadge';
+import { useNotificationStore } from '@/src/features/smart-center/store/notificationStore';
 import { useAuth } from '@/src/app/providers/AuthProvider';
 import { Home, Calendar, LogOut, Loader2, Menu, X, Users, Briefcase, Building, FileText, Settings, Database, Activity, CalendarCheck, Download, WifiOff, Search, Bell, MenuSquare, Megaphone } from 'lucide-react';
 import { cn } from '@/src/shared/lib/utils';
@@ -13,8 +14,7 @@ export function AppLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const [isSmartCenterOpen, setIsSmartCenterOpen] = useState(false);
-  const { unreadCount } = useSmartCenter();
+  const { isOpen: isSmartCenterOpen, setIsOpen: setIsSmartCenterOpen } = useNotificationStore();
   
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
   const logoUrl = `${supabaseUrl}/storage/v1/object/public/company-assets/logo-kivon-white.png`;
@@ -255,14 +255,9 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-x-3 lg:gap-x-6">
-              <button type="button" onClick={() => setIsSmartCenterOpen(true)} className="p-2 text-kivon-text-sec hover:text-white transition-colors relative hidden sm:block">
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 ring-2 ring-kivon-bg text-[9px] font-bold text-white">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-                <Bell className="h-5 w-5" />
-              </button>
+              <div className="block">
+                <SmartCenterHeaderBadge />
+              </div>
               
               <div className="hidden sm:block h-6 w-px bg-kivon-border" />
               

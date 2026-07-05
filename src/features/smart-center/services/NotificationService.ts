@@ -3,14 +3,18 @@ import { AppNotification } from '../types';
 
 export class NotificationService {
   /**
-   * Fetches the user's active and targeted notifications based on vw_user_notifications
+   * Fetches the user's active and targeted notifications with offset-based infinite pagination (cursor-like via SWR)
    */
-  static async fetchUserNotifications(): Promise<AppNotification[]> {
+  static async fetchUserNotifications(page: number = 0, limit: number = 20): Promise<AppNotification[]> {
+    const from = page * limit;
+    const to = from + limit - 1;
+
     const { data, error } = await supabase
       .from('vw_user_notifications')
       .select('*')
       .order('is_pinned', { ascending: false })
-      .order('publish_at', { ascending: false });
+      .order('publish_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Error fetching notifications:', error);
