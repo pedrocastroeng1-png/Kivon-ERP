@@ -3,6 +3,7 @@ import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/src/app/providers/AuthProvider';
 import { Home, Calendar, LogOut, Loader2, Menu, X, Users, Briefcase, Building, FileText, Settings, Database, Activity, CalendarCheck, Download, WifiOff, Search, Bell, MenuSquare } from 'lucide-react';
 import { cn } from '@/src/shared/lib/utils';
+import { ReloadPrompt } from '@/src/shared/components/ReloadPrompt';
 
 export function AppLayout() {
   const { user, profile, loading, signOut } = useAuth();
@@ -271,6 +272,7 @@ export function AppLayout() {
           </div>
         </main>
       </div>
+      <ReloadPrompt />
     </div>
   );
 }
