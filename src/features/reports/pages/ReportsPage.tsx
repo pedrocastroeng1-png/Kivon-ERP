@@ -9,6 +9,55 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
+interface ReportTotals {
+  diarias: number;
+  reais: number;
+  employees: number;
+  faltas: number;
+  atestados: number;
+  ferias: number;
+  folgas: number;
+}
+
+interface ProjectRecord {
+  id: string;
+  name: string;
+  code?: string | null;
+}
+
+interface JobRoleRecord {
+  name: string;
+  daily_rate: number;
+}
+
+interface EmployeeRecord {
+  id: string;
+  full_name: string;
+  document_number?: string | null;
+  job_roles: JobRoleRecord | null;
+}
+
+interface PresenceRecord {
+  id: string;
+  presence_date: string;
+  shift: string;
+  status: string;
+  employee_id: string;
+  project_id: string;
+  employees: EmployeeRecord | null;
+  projects: ProjectRecord | null;
+}
+
+interface GroupedPresence {
+  key: string;
+  presence_date: string;
+  project_name: string;
+  employee_name: string;
+  employee_id: string;
+  base_rate: number;
+  records: PresenceRecord[];
+}
+
 interface ConsolidatedRecord {
   key: string;
   presence_date: string;
@@ -25,7 +74,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   
   // Totals
-  const [totals, setTotals] = useState({
+  const [totals, setTotals] = useState<ReportTotals>({
     diarias: 0,
     reais: 0,
     employees: 0,
@@ -41,8 +90,8 @@ export default function ReportsPage() {
   const [projectId, setProjectId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   
-  const [projects, setProjects] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
 
   useEffect(() => {
     fetchFilters();
@@ -53,8 +102,8 @@ export default function ReportsPage() {
       supabase.from('projects').select('id, name').order('name'),
       supabase.from('employees').select('id, full_name').order('full_name')
     ]);
-    if (pRes.data) setProjects(pRes.data);
-    if (eRes.data) setEmployees(eRes.data);
+    if (pRes.data) setProjects(pRes.data as unknown as ProjectRecord[]);
+    if (eRes.data) setEmployees(eRes.data as unknown as EmployeeRecord[]);
   }
 
   async function generateReport() {
@@ -80,11 +129,12 @@ export default function ReportsPage() {
     if (projectId) query = query.eq('project_id', projectId);
     if (employeeId) query = query.eq('employee_id', employeeId);
 
-    const { data: result, error } = await query;
+    const { data: rawResult, error } = await query;
+    const result = rawResult as unknown as PresenceRecord[] | null;
 
     if (!error && result) {
       // Consolidate data
-      const groups = new Map<string, any>();
+      const groups = new Map<string, GroupedPresence>();
       
       let tDiarias = 0;
       let tReais = 0;
@@ -94,7 +144,7 @@ export default function ReportsPage() {
       let tFolgas = 0;
       const uniqueEmployees = new Set<string>();
 
-      result.forEach((row: any) => {
+      result.forEach((row) => {
         const key = `${row.presence_date}_${row.employee_id}_${row.project_id}`;
         if (!groups.has(key)) {
           groups.set(key, {
@@ -107,14 +157,14 @@ export default function ReportsPage() {
             records: []
           });
         }
-        groups.get(key).records.push(row);
+        groups.get(key)!.records.push(row);
       });
 
       const consolidated: ConsolidatedRecord[] = Array.from(groups.values()).map(g => {
         let countPresente = 0;
         const statuses = new Set<string>();
 
-        g.records.forEach((r: any) => {
+        g.records.forEach((r) => {
           statuses.add(r.status);
           uniqueEmployees.add(g.employee_id);
           
@@ -130,8 +180,8 @@ export default function ReportsPage() {
         tReais += value;
         
         let finalStatus = '';
-        const morning = g.records.find((r: any) => r.shift === 'manha');
-        const afternoon = g.records.find((r: any) => r.shift === 'tarde');
+        const morning = g.records.find((r) => r.shift === 'manha');
+        const afternoon = g.records.find((r) => r.shift === 'tarde');
 
         if (morning && afternoon) {
           if (morning.status === afternoon.status) {
@@ -166,7 +216,7 @@ export default function ReportsPage() {
         reais: tReais,
         employees: uniqueEmployees.size,
         faltas: tFaltas,
-        attestados: tAtestados,
+        atestados: tAtestados,
         ferias: tFerias,
         folgas: tFolgas
       });

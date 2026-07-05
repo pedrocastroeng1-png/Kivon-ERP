@@ -8,19 +8,24 @@ import { Modal } from '@/src/shared/components/ui/Modal';
 import { useAuth } from '@/src/app/providers/AuthProvider';
 import toast from 'react-hot-toast';
 
+interface ProjectRecord {
+  id: string;
+  name: string;
+}
+
 interface PresenceRecord {
   id: string;
   presence_date: string;
   shift: string;
   status: string;
   registered_at: string;
-  users: { full_name: string }; // registered_by
+  users: { full_name: string } | null; // registered_by
   employees: { 
     id: string; 
     full_name: string; 
-    job_roles: { name: string; daily_rate: number };
-  };
-  projects: { id: string; name: string };
+    job_roles: { name: string; daily_rate: number } | null;
+  } | null;
+  projects: ProjectRecord | null;
   presence_photos?: { storage_path: string } | null;
   photo_url?: string;
 }
@@ -38,6 +43,17 @@ interface ConsolidatedDailyRecord {
   photo_url: string | null;
 }
 
+interface DailyReportSummary {
+  previstos: number;
+  presentes: number;
+  faltas: number;
+  atestados: number;
+  ferias: number;
+  folgas: number;
+  totalDiarias: number;
+  valorTotal: number;
+}
+
 export default function DailyReportsPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.profiles?.code === 'admin';
@@ -47,14 +63,14 @@ export default function DailyReportsPage() {
   const [dateFilter, setDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [projectId, setProjectId] = useState('');
   
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
   
   // Photo modal
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
 
   // Summary State
-  const [summary, setSummary] = useState({
+  const [summary, setSummary] = useState<DailyReportSummary>({
     previstos: 0,
     presentes: 0,
     faltas: 0,
@@ -75,7 +91,7 @@ export default function DailyReportsPage() {
 
   async function fetchFilters() {
     const { data: pRes } = await supabase.from('projects').select('id, name').order('name');
-    if (pRes) setProjects(pRes);
+    if (pRes) setProjects(pRes as unknown as ProjectRecord[]);
   }
 
   async function fetchData() {
@@ -101,14 +117,15 @@ export default function DailyReportsPage() {
     try {
       if (projectId) query = query.eq('project_id', projectId);
 
-      const { data: result, error } = await query;
+      const { data: rawResult, error } = await query;
+      const result = rawResult as unknown as PresenceRecord[] | null;
 
       if (error) {
         throw error;
       }
 
       if (result) {
-        const records = await Promise.all(result.map(async (row: any) => {
+        const records = await Promise.all(result.map(async (row) => {
           let photo_url = '';
           if (row.presence_photos?.storage_path) {
             const { data: { publicUrl } } = supabase.storage
@@ -120,10 +137,13 @@ export default function DailyReportsPage() {
         }));
 
         // Consolidate Data
-        const grouped = new Map<string, any[]>();
-        records.forEach((r: any) => {
+        const grouped = new Map<string, PresenceRecord[]>();
+        records.forEach((r) => {
           if (!r.employees || !r.employees.job_roles) {
              throw new Error('Falha de permissão ao carregar dados de funcionários ou cargos. Verifique com um administrador.');
+          }
+          if (!r.projects) {
+             throw new Error('Falha de permissão ao carregar dados de projetos. Verifique com um administrador.');
           }
           const key = r.employees.id;
           if (!grouped.has(key)) grouped.set(key, []);
@@ -155,7 +175,7 @@ export default function DailyReportsPage() {
           });
 
           const diarias = countPresente * 0.5;
-          const baseRate = groupRecords[0].employees.job_roles.daily_rate || 0;
+          const baseRate = groupRecords[0].employees!.job_roles!.daily_rate || 0;
           const valor = diarias * baseRate;
 
           sTotalDiarias += diarias;
@@ -182,9 +202,9 @@ export default function DailyReportsPage() {
 
           consolidated.push({
             employee_id: empId,
-            employee_name: groupRecords[0].employees.full_name,
-            job_role: groupRecords[0].employees.job_roles.name,
-            project_name: groupRecords[0].projects.name,
+            employee_name: groupRecords[0].employees!.full_name,
+            job_role: groupRecords[0].employees!.job_roles!.name,
+            project_name: groupRecords[0].projects!.name,
             status: finalStatus,
             diarias,
             valor,
@@ -209,9 +229,10 @@ export default function DailyReportsPage() {
           valorTotal: sValorTotal
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao buscar registros:', err);
-      toast.error(err.message || 'Erro ao carregar o fechamento diário.');
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar o fechamento diário.';
+      toast.error(errorMessage);
       setData([]);
     } finally {
       setLoading(false);
