@@ -6,6 +6,7 @@ import { Loader2, Download, Search, Image as ImageIcon, ChevronLeft, ChevronRigh
 import { format, parseISO } from 'date-fns';
 import { Modal } from '@/src/shared/components/ui/Modal';
 import { useAuth } from '@/src/app/providers/AuthProvider';
+import { cn } from '@/src/shared/lib/utils';
 import toast from 'react-hot-toast';
 
 interface ProjectRecord {
@@ -28,6 +29,7 @@ interface PresenceRecord {
   projects: ProjectRecord | null;
   presence_photos?: { storage_path: string } | null;
   photo_url?: string;
+  photo_error?: boolean;
 }
 
 interface ConsolidatedDailyRecord {
@@ -41,6 +43,7 @@ interface ConsolidatedDailyRecord {
   registered_at: string; // we'll use the earliest or latest capture
   registered_by: string;
   photo_url: string | null;
+  photo_error?: boolean;
 }
 
 interface DailyReportSummary {
@@ -53,6 +56,8 @@ interface DailyReportSummary {
   totalDiarias: number;
   valorTotal: number;
 }
+
+const PHOTO_SIGNED_URL_EXPIRATION = 300; // 5 minutos
 
 export default function DailyReportsPage() {
   const { profile } = useAuth();
@@ -127,13 +132,29 @@ export default function DailyReportsPage() {
       if (result) {
         const records = await Promise.all(result.map(async (row) => {
           let photo_url = '';
+          let photo_error = false;
           if (row.presence_photos?.storage_path) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('presence-photos')
-              .getPublicUrl(row.presence_photos.storage_path);
-            photo_url = publicUrl;
+            try {
+              const { data, error } = await supabase.storage
+                .from('presence-photos')
+                .createSignedUrl(row.presence_photos.storage_path, PHOTO_SIGNED_URL_EXPIRATION);
+              
+              if (error) {
+                photo_error = true;
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Erro ao gerar signed URL da evidência', error);
+                }
+              } else if (data) {
+                photo_url = data.signedUrl;
+              }
+            } catch (err) {
+              photo_error = true;
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Erro inesperado ao gerar signed URL', err);
+              }
+            }
           }
-          return { ...row, photo_url };
+          return { ...row, photo_url, photo_error };
         }));
 
         // Consolidate Data
@@ -198,7 +219,8 @@ export default function DailyReportsPage() {
           }
 
           // Get the photo (prefer morning if exists, else whatever)
-          const photoRec = groupRecords.find(r => r.photo_url) || groupRecords[0];
+          const photoRecWithUrl = groupRecords.find(r => r.photo_url);
+          const photoRecWithError = groupRecords.find(r => r.photo_error);
 
           consolidated.push({
             employee_id: empId,
@@ -210,7 +232,8 @@ export default function DailyReportsPage() {
             valor,
             registered_at: groupRecords[0].registered_at, // showing latest time
             registered_by: groupRecords[0].users?.full_name || '',
-            photo_url: photoRec.photo_url || null,
+            photo_url: photoRecWithUrl ? photoRecWithUrl.photo_url : null,
+            photo_error: photoRecWithError ? photoRecWithError.photo_error : false,
           });
         });
 
@@ -249,11 +272,10 @@ export default function DailyReportsPage() {
   }
 
   // Filter records with photos to allow navigation
-  const photosArray = data.filter(r => r.photo_url).map(r => r.photo_url!);
+  const photosArray = data.filter(r => r.photo_url || r.photo_error).map(r => ({ url: r.photo_url, error: r.photo_error }));
   
-  function openPhoto(url: string) {
-    const idx = photosArray.indexOf(url);
-    setSelectedPhotoIndex(idx !== -1 ? idx : null);
+  function openPhoto(index: number) {
+    setSelectedPhotoIndex(index);
     setPhotoModalOpen(true);
   }
 
@@ -371,16 +393,26 @@ export default function DailyReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-kivon-border">
-                {data.map((row) => (
+                {data.map((row) => {
+                  const hasEvidence = row.photo_url || row.photo_error;
+                  const photoIndex = hasEvidence ? photosArray.findIndex(p => p.url === row.photo_url && p.error === row.photo_error) : -1;
+                  return (
                   <tr key={row.employee_id} className="bg-kivon-card hover:bg-kivon-hover transition-colors">
                     <td className="px-6 py-3">
-                      {row.photo_url ? (
-                        <img 
-                          src={row.photo_url} 
-                          alt="Foto" 
-                          className="h-10 w-10 rounded-md object-cover cursor-pointer border border-kivon-border hover:opacity-80 transition"
-                          onClick={() => openPhoto(row.photo_url!)}
-                        />
+                      {hasEvidence ? (
+                        <div 
+                          className={cn(
+                            "h-10 w-10 rounded-md cursor-pointer border flex items-center justify-center overflow-hidden hover:opacity-80 transition relative",
+                            row.photo_error ? "bg-red-500/10 border-red-500/20" : "border-kivon-border bg-kivon-bg"
+                          )}
+                          onClick={() => photoIndex !== -1 && openPhoto(photoIndex)}
+                        >
+                          {row.photo_url ? (
+                             <img src={row.photo_url} alt="Foto" className="w-full h-full object-cover" />
+                          ) : (
+                             <ImageIcon className="h-5 w-5 text-red-400 opacity-80" />
+                          )}
+                        </div>
                       ) : (
                         <div className="h-10 w-10 rounded-md bg-kivon-bg border border-kivon-border flex items-center justify-center text-kivon-text-sec">
                           <ImageIcon className="h-5 w-5 opacity-50" />
@@ -402,7 +434,8 @@ export default function DailyReportsPage() {
                     <td className="px-6 py-4 text-kivon-text-sec">{format(new Date(row.registered_at), 'HH:mm')}</td>
                     <td className="px-6 py-4 text-kivon-text-sec">{row.registered_by}</td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>
@@ -412,12 +445,20 @@ export default function DailyReportsPage() {
       <Modal isOpen={photoModalOpen} onClose={() => setPhotoModalOpen(false)} title="Evidência do Registro">
         <div className="flex flex-col items-center gap-4">
           {selectedPhotoIndex !== null && photosArray[selectedPhotoIndex] && (
-            <div className="relative group flex items-center justify-center w-full">
-              <img 
-                src={photosArray[selectedPhotoIndex]} 
-                alt="Foto Ampliada" 
-                className="max-w-full max-h-[65vh] rounded-lg shadow-sm transition-transform duration-300 hover:scale-150 transform-gpu cursor-zoom-in" 
-              />
+            <div className="relative group flex items-center justify-center w-full min-h-[200px]">
+              {photosArray[selectedPhotoIndex].error ? (
+                <div className="flex flex-col items-center justify-center text-kivon-text-sec p-8 bg-kivon-bg rounded-lg border border-kivon-border w-full">
+                  <ImageIcon className="h-16 w-16 mb-4 opacity-50 text-red-400" />
+                  <p className="text-lg font-medium text-white mb-2">Evidência indisponível.</p>
+                  <p className="text-sm text-center">Não foi possível carregar a imagem. A assinatura da URL pode ter expirado ou o arquivo foi removido.</p>
+                </div>
+              ) : (
+                <img 
+                  src={photosArray[selectedPhotoIndex].url || ''} 
+                  alt="Foto Ampliada" 
+                  className="max-w-full max-h-[65vh] rounded-lg shadow-sm transition-transform duration-300 hover:scale-150 transform-gpu cursor-zoom-in" 
+                />
+              )}
               {selectedPhotoIndex > 0 && (
                 <button 
                   onClick={prevPhoto}
@@ -436,8 +477,8 @@ export default function DailyReportsPage() {
               )}
             </div>
           )}
-          {isAdmin && selectedPhotoIndex !== null && photosArray[selectedPhotoIndex] && (
-            <Button onClick={() => window.open(photosArray[selectedPhotoIndex], '_blank')}>
+          {isAdmin && selectedPhotoIndex !== null && photosArray[selectedPhotoIndex] && !photosArray[selectedPhotoIndex].error && (
+            <Button onClick={() => window.open(photosArray[selectedPhotoIndex].url || '', '_blank')}>
               <Download className="h-4 w-4 mr-2" /> Baixar Imagem
             </Button>
           )}
