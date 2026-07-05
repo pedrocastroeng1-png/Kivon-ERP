@@ -8,7 +8,8 @@
 - **Visualização de Evidências Fotográficas:** Corrigido problema em que a foto de presença não carregava devido ao uso de `getPublicUrl` em bucket privado. A geração da URL foi substituída por `createSignedUrl` com expiração de 5 minutos.
 - Adicionado tratamento de erro visual para links expirados ou inválidos (mensagem "Evidência indisponível.").
 - **Refatoração:** Criada a camada de serviço `ImageService` (`src/shared/services/ImageService.ts`) para centralizar a comunicação com o storage, padronizando a geração e upload de arquivos. Implementada também uma estratégia de cache em memória para as Signed URLs reduzindo requisições desnecessárias.
-- **Identidade Visual:** Reprojeto completo da Splash Screen com fundo sólido (#090909), logo centralizada com animação suave de escala e fade-in, e um novo indicador de carregamento minimalista. Implementado fallback robusto para garantir a exibição da logo local (`/logo-kivon-white.png`) caso o carregamento remoto falhe, eliminando o erro de imagem quebrada e garantindo consistência no PWA.
+- **Identidade Visual:** Reprojeto premium da Splash Screen focada em elegância e minimalismo corporativo. O fundo utiliza um gradiente radial extremamente sutil sobre `#090909`. A animação central, com cerca de `1s`, foca exclusivamente no símbolo "K" em alta resolução com um *shimmer* dourado suave. Adicionado novo indicador de carregamento dourado de 1px e a mensagem institucional com tradução sutil (`KIVON ERP`).
+- **Resiliência e Acessibilidade (Splash):** Adicionado *fallback* em SVG caso a imagem remota/local falhe (evitando imagem quebrada). Respeita `prefers-reduced-motion` no CSS, desativando o *shimmer* e traduzindo o efeito para um simples *fade-in*.
 - **PWA:** Atualizado `vite.config.ts` com máscara de ícone (`purpose: 'any maskable'`) para compatibilidade e melhoria da experiência de instalação.
 
 ## [1.0.0] - 2026-07-04

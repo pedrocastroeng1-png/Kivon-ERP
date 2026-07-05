@@ -1,3 +1,4 @@
+import { cn } from '@/src/shared/lib/utils';
 import toast from 'react-hot-toast';
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/src/shared/lib/supabase';
@@ -218,7 +219,7 @@ export default function DailyRegisterPage() {
         <div className="mb-6 max-w-sm">
           <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Selecione a Obra</label>
           <select
-            className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
+            className="flex h-12 sm:h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
           >
@@ -231,12 +232,12 @@ export default function DailyRegisterPage() {
 
         {selectedProjectId && (
           <>
-            <div className="mb-6 flex items-center rounded-lg border border-kivon-border bg-kivon-bg px-3 max-w-sm focus-within:ring-1 focus-within:ring-kivon-primary focus-within:border-kivon-primary transition-all">
+            <div className="mb-6 flex items-center rounded-lg border border-kivon-border bg-kivon-bg px-3 max-w-sm focus-within:ring-1 focus-within:ring-kivon-primary focus-within:border-kivon-primary transition-all h-12 sm:h-10">
               <Search className="mr-2 h-5 w-5 text-kivon-text-sec" />
               <input
                 type="text"
                 placeholder="Pesquisar funcionário..."
-                className="w-full border-0 bg-transparent py-2.5 text-white placeholder-kivon-text-sec focus:ring-0 outline-none text-sm"
+                className="w-full border-0 bg-transparent py-2.5 text-white placeholder-kivon-text-sec focus:ring-0 outline-none text-base sm:text-sm h-full"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -253,29 +254,29 @@ export default function DailyRegisterPage() {
             ) : (
               <div className="space-y-4">
                 {filtered.map(emp => (
-                  <div key={emp.employee_id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-kivon-border bg-kivon-card p-5 hover:bg-kivon-hover transition-colors">
-                    <div>
+                  <div key={emp.employee_id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-kivon-border bg-kivon-card p-4 sm:p-5 hover:bg-kivon-hover transition-colors">
+                    <div className="mb-4 sm:mb-0">
                       <h3 className="font-medium text-white text-base">{emp.full_name}</h3>
                       <p className="text-sm text-kivon-text-sec mt-0.5">{emp.job_role_name} • R$ {emp.daily_rate?.toFixed(2) || '0.00'}/dia</p>
                     </div>
-                    <div className="mt-4 sm:mt-0 flex gap-3">
+                    <div className="grid grid-cols-2 sm:flex gap-3">
                       <Button
                         variant={emp.presence_morning ? 'secondary' : 'primary'}
                         size="sm"
                         disabled={!!emp.presence_morning}
                         onClick={() => handleRegisterClick(emp.employee_id, 'manha')}
-                        className={emp.presence_morning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover'}
+                        className={cn(emp.presence_morning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover', 'h-12 sm:h-9 w-full sm:w-auto text-base sm:text-sm')}
                       >
-                        {emp.presence_morning ? <><Check className="mr-2 h-4 w-4" /> Manhã</> : 'Manhã'}
+                        {emp.presence_morning ? <><Check className="mr-2 h-5 w-5 sm:h-4 sm:w-4" /> Manhã</> : 'Manhã'}
                       </Button>
                       <Button
                         variant={emp.presence_afternoon ? 'secondary' : 'primary'}
                         size="sm"
                         disabled={!!emp.presence_afternoon}
                         onClick={() => handleRegisterClick(emp.employee_id, 'tarde')}
-                        className={emp.presence_afternoon ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover'}
+                        className={cn(emp.presence_afternoon ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-kivon-bg text-kivon-text hover:text-white border border-kivon-border hover:bg-kivon-hover', 'h-12 sm:h-9 w-full sm:w-auto text-base sm:text-sm')}
                       >
-                        {emp.presence_afternoon ? <><Check className="mr-2 h-4 w-4" /> Tarde</> : 'Tarde'}
+                        {emp.presence_afternoon ? <><Check className="mr-2 h-5 w-5 sm:h-4 sm:w-4" /> Tarde</> : 'Tarde'}
                       </Button>
                     </div>
                   </div>

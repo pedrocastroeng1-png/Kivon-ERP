@@ -296,7 +296,7 @@ export default function DailyReportsPage() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Obra</label>
             <select
-              className="flex h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
+              className="flex h-12 sm:h-10 w-full rounded-lg border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >
@@ -361,7 +361,61 @@ export default function DailyReportsPage() {
             Nenhum registro encontrado para esta data.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="block lg:hidden">
+            <div className="space-y-4 p-4">
+              {data.map((row) => {
+                const hasEvidence = row.photo_url || row.photo_error;
+                const photoIndex = hasEvidence ? photosArray.findIndex(p => p.url === row.photo_url && p.error === row.photo_error) : -1;
+                return (
+                  <div key={row.employee_id} className="bg-kivon-card border border-kivon-border rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        {hasEvidence ? (
+                          <div 
+                            className={cn(
+                              "h-12 w-12 rounded-md cursor-pointer border flex items-center justify-center overflow-hidden hover:opacity-80 transition relative shrink-0",
+                              row.photo_error ? "bg-red-500/10 border-red-500/20" : "border-kivon-border bg-kivon-bg"
+                            )}
+                            onClick={() => photoIndex !== -1 && openPhoto(photoIndex)}
+                          >
+                            {row.photo_url ? (
+                               <img src={row.photo_url} alt="Foto" className="w-full h-full object-cover" />
+                            ) : (
+                               <ImageIcon className="h-5 w-5 text-red-400 opacity-80" />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-12 w-12 rounded-md bg-kivon-bg border border-kivon-border flex items-center justify-center text-kivon-text-sec shrink-0">
+                            <ImageIcon className="h-6 w-6 opacity-50" />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-medium text-white text-base">{row.employee_name}</h4>
+                          <p className="text-sm text-kivon-text-sec">{row.job_role}</p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border ${getStatusBadgeClass(row.status)}`}>
+                        {row.status}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-kivon-border/50">
+                      <div>
+                        <span className="text-kivon-text-sec block text-xs">Diária</span>
+                        <span className="text-white font-medium">{row.diarias.toString().replace('.', ',')}</span>
+                      </div>
+                      <div>
+                        <span className="text-kivon-text-sec block text-xs">Valor</span>
+                        <span className="text-emerald-400 font-medium">R$ {row.valor.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-sm text-kivon-text-sec">
               <thead className="bg-kivon-bg/80 text-xs uppercase text-kivon-text-sec">
                 <tr>
@@ -423,6 +477,7 @@ export default function DailyReportsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 

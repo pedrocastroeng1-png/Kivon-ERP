@@ -187,7 +187,47 @@ export default function UsersPage() {
             Nenhum usuário encontrado.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="block lg:hidden space-y-4 p-4">
+            {users.map((user) => (
+              <div key={user.id} className="bg-kivon-card border border-kivon-border rounded-lg p-4 space-y-3 relative">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-medium text-white text-base">{user.full_name}</h4>
+                    <p className="text-sm text-kivon-text-sec">{user.profiles?.name || '-'}</p>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold leading-5 ${user.active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                    {user.active ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-kivon-border/50 mt-2">
+                  <Button variant="secondary" size="sm" onClick={() => openModal(user)} className="h-10 border-kivon-border bg-kivon-bg text-kivon-primary">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => toggleActive(user.id, user.active)}
+                    isLoading={actionLoading === user.id}
+                    className="h-10 border-kivon-border bg-kivon-bg text-white"
+                  >
+                    {user.active ? 'Inativar' : 'Ativar'}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => resendInvite(user.id)} disabled={actionLoading === `invite-${user.id}`} className="h-10 border-kivon-border bg-kivon-bg text-kivon-primary">
+                    {actionLoading === `invite-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                    Convite
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => sendResetPassword(user.id)} disabled={actionLoading === `reset-${user.id}`} className="h-10 border-kivon-border bg-kivon-bg text-kivon-primary">
+                    {actionLoading === `reset-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Key className="h-4 w-4 mr-2" />}
+                    Senha
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-sm text-kivon-text-sec">
               <thead className="bg-kivon-bg/50 text-xs uppercase text-kivon-text-sec">
                 <tr>
@@ -248,6 +288,7 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
@@ -262,7 +303,7 @@ export default function UsersPage() {
             <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Perfil</label>
             <select
               {...register('profileCode')}
-              className="flex h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
+              className="flex h-12 sm:h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
             >
               <option value="operador">Operador (Acesso restrito)</option>
               <option value="admin">Administrador (Acesso total)</option>

@@ -18,71 +18,171 @@
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
         background-color: #090909;
+        background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 60%);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         z-index: 999999;
-        transition: opacity 0.6s ease-out;
+        transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       }
       #kivon-splash.hidden {
         opacity: 0;
         pointer-events: none;
       }
-      .kivon-logo-container {
-        width: 240px;
+      .splash-content {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        opacity: 0;
-        animation: logoEntrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
-      .kivon-logo-container img {
-        width: 100%;
-        height: auto;
-      }
-      .kivon-loading-bar-container {
-        width: 160px;
-        height: 2px;
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 2px;
-        margin-top: 40px;
-        overflow: hidden;
+      .logo-wrapper {
         position: relative;
+        width: 72px;
+        height: 72px;
         opacity: 0;
-        animation: fadeIn 0.5s ease-out 0.8s forwards;
+        transform: scale(0.96);
+        animation: logoEnter 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
-      .kivon-loading-progress {
+      .logo-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .logo-image.error {
+        display: none;
+      }
+      .logo-image.error + .fallback-svg {
+        display: block;
+      }
+      .fallback-svg {
+        display: none;
+        width: 100%;
+        height: 100%;
+      }
+      .logo-shimmer {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, transparent 35%, rgba(212, 175, 55, 0.25) 50%, transparent 65%);
+        background-size: 200% 200%;
+        mask-image: url('/icon-192.png');
+        -webkit-mask-image: url('/icon-192.png');
+        mask-size: contain;
+        -webkit-mask-size: contain;
+        mask-repeat: no-repeat;
+        -webkit-mask-repeat: no-repeat;
+        mask-position: center;
+        -webkit-mask-position: center;
+        animation: shimmerPass 1.2s cubic-bezier(0.4, 0, 0.2, 1) 0.8s forwards;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .text-wrapper {
+        margin-top: 28px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        opacity: 0;
+        transform: translateY(8px);
+        animation: textEnter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.6s forwards;
+      }
+      .title {
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        margin: 0;
+      }
+      .subtitle {
+        color: #888888;
+        font-size: 12px;
+        font-weight: 400;
+        margin-top: 6px;
+        letter-spacing: 0.02em;
+      }
+      .loading-bar-container {
+        width: 120px;
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.05);
+        margin-top: 48px;
+        position: relative;
+        overflow: hidden;
+        opacity: 0;
+        animation: fadeEnter 0.5s ease-out 1.2s forwards;
+      }
+      .loading-progress {
         position: absolute;
         top: 0; left: 0; bottom: 0;
-        width: 40%;
-        background-color: rgba(255, 255, 255, 0.8);
-        border-radius: 2px;
+        width: 30%;
+        background-color: #D4AF37;
         animation: minimalistProgress 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       }
 
-      @keyframes logoEntrance {
-        0% { transform: scale(0.98); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
+      /* Keyframes */
+      @keyframes logoEnter {
+        0% { opacity: 0; transform: scale(0.96); }
+        100% { opacity: 1; transform: scale(1); }
       }
-      
-      @keyframes fadeIn {
+      @keyframes textEnter {
+        0% { opacity: 0; transform: translateY(8px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shimmerPass {
+        0% { background-position: 200% 0; opacity: 0; }
+        20% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { background-position: -200% 0; opacity: 0; }
+      }
+      @keyframes fadeEnter {
         to { opacity: 1; }
       }
-
       @keyframes minimalistProgress {
-        0% { left: -40%; }
-        100% { left: 100%; }
+        0% { left: -40%; width: 40%; }
+        50% { width: 60%; }
+        100% { left: 100%; width: 40%; }
+      }
+
+      /* Reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        .logo-wrapper {
+          animation: fadeEnter 1s ease-out forwards;
+          transform: none;
+        }
+        .text-wrapper {
+          animation: fadeEnter 1s ease-out 0.5s forwards;
+          transform: none;
+        }
+        .logo-shimmer {
+          display: none;
+        }
+        .loading-progress {
+          animation: none;
+          width: 100%;
+          opacity: 0.5;
+        }
       }
     </style>
   </head>
   <body>
     <div id="kivon-splash">
-      <div class="kivon-logo-container">
-        <img src="/logo-kivon-white.png" alt="KIVON ERP" />
-      </div>
-      <div class="kivon-loading-bar-container">
-        <div class="kivon-loading-progress"></div>
+      <div class="splash-content">
+        <div class="logo-wrapper">
+          <img src="/icon-192.png" alt="KIVON" class="logo-image" onerror="this.classList.add('error');" />
+          <svg class="fallback-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" rx="20" fill="#1A1A1A"/>
+            <path d="M35 25V75M65 25L35 50L65 75" stroke="#D4AF37" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="logo-shimmer"></div>
+        </div>
+        
+        <div class="text-wrapper">
+          <h1 class="title">KIVON ERP</h1>
+          <p class="subtitle">Gestão Inteligente de Obras</p>
+        </div>
+
+        <div class="loading-bar-container">
+          <div class="loading-progress"></div>
+        </div>
       </div>
     </div>
     <div id="root"></div>
