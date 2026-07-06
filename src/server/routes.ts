@@ -24,6 +24,7 @@ apiRouter.use(express.json());
 const verifyAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
+    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
     return res.status(401).json({ error: 'Missing Authorization header' });
   }
   
@@ -31,20 +32,24 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   
   if (error || !user) {
+    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Invalid token`);
     return res.status(401).json({ error: 'Invalid token' });
   }
 
   // Set user id in headers for subsequent use (like clear-password-flag)
   req.headers['x-user-id'] = user.id;
 
-  // Fetch user profile
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .select('code')
+  // Fetch user profile using the correct relationship
+  const { data: userData, error: userError } = await supabaseAdmin
+    .from('users')
+    .select('profiles!inner(code)')
     .eq('id', user.id)
     .single();
 
-  if (profileError || profile?.code !== 'admin') {
+  const profileCode = (userData as any)?.profiles?.code;
+
+  if (userError || profileCode !== 'admin') {
+    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Access Denied. User ID: ${user.id}, Profile: ${profileCode || 'Unknown'}, Reason: Not an admin`);
     return res.status(403).json({ error: 'Forbidden: Admins only' });
   }
 
@@ -54,6 +59,7 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
 const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
+    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
     return res.status(401).json({ error: 'Missing Authorization header' });
   }
   
@@ -61,6 +67,7 @@ const verifyAuth = async (req: express.Request, res: express.Response, next: exp
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   
   if (error || !user) {
+    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Invalid token`);
     return res.status(401).json({ error: 'Invalid token' });
   }
 
