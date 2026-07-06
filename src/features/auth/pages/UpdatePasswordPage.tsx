@@ -25,6 +25,13 @@ export default function UpdatePasswordPage() {
     setLoading(true);
     setError('');
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setError('Sessão expirada. Faça login novamente.');
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({
       password: password
     });
@@ -33,6 +40,19 @@ export default function UpdatePasswordPage() {
       setError(error.message);
       setLoading(false);
     } else {
+      // Clear force_password_change flag via API
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        await fetch(`${apiUrl}/api/users/clear-force-password`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+      } catch (e) {
+        console.error("Failed to clear force_password_change", e);
+      }
+      
       alert('Senha atualizada com sucesso!');
       navigate('/');
     }

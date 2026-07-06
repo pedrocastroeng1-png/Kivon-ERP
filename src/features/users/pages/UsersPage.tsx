@@ -4,7 +4,7 @@ import { supabase } from '@/src/shared/lib/supabase';
 import { Button } from '@/src/shared/components/ui/Button';
 import { Input } from '@/src/shared/components/ui/Input';
 import { Modal } from '@/src/shared/components/ui/Modal';
-import { Loader2, Plus, Mail, Key, Edit2 } from 'lucide-react';
+import { Loader2, Plus, Edit2, Key, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,9 @@ interface UserProfile {
 const userSchema = z.object({
   fullName: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional().or(z.literal('')),
   profileCode: z.enum(['admin', 'operador']),
+  active: z.boolean(),
 });
 
 type UserForm = z.infer<typeof userSchema>;
@@ -33,10 +35,16 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [createdUser, setCreatedUser] = useState<{
+    fullName: string;
+    email: string;
+    password?: string;
+    profile: string;
+  } | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
-    defaultValues: { profileCode: 'operador' }
+    defaultValues: { profileCode: 'operador', active: true }
   });
 
   useEffect(() => {
@@ -70,22 +78,15 @@ export default function UsersPage() {
       reset({
         fullName: user.full_name,
         profileCode: user.profiles?.code as 'admin' | 'operador',
-        email: ''
+        email: '',
+        password: '',
+        active: user.active
       });
     } else {
       setEditingId(null);
-      reset({ fullName: '', email: '', profileCode: 'operador' });
+      reset({ fullName: '', email: '', password: '', profileCode: 'operador', active: true });
     }
     setIsModalOpen(true);
-  }
-
-  async function toggleActive(userId: string, currentStatus: boolean) {
-    if (confirm(`Deseja ${currentStatus ? 'inativar' : 'ativar'} este usuário?`)) {
-      setActionLoading(userId);
-      await supabase.from('users').update({ active: !currentStatus }).eq('id', userId);
-      await fetchUsers();
-      setActionLoading(null);
-    }
   }
 
   async function callApi(url: string, method: string = 'POST', body?: any) {
@@ -109,7 +110,7 @@ export default function UsersPage() {
       return data;
     } else {
       if (!res.ok) {
-        throw new Error(`Erro na API (${res.status}): O endpoint ${url} não retornou JSON. Isso ocorre se a API não estiver rodando ou a rota estiver incorreta.`);
+        throw new Error(`Erro na API (${res.status}): O endpoint ${url} não retornou JSON.`);
       }
       return null;
     }
@@ -119,49 +120,72 @@ export default function UsersPage() {
     try {
       if (editingId) {
         // Edit flow
-        const { data: profileObj } = await supabase.from('profiles').select('id').eq('code', data.profileCode).single();
-        if (profileObj) {
-          await supabase.from('users').update({
-            full_name: data.fullName,
-            profile_id: profileObj.id
-          }).eq('id', editingId);
-        }
-        alert('Usuário atualizado com sucesso.');
+        await callApi(`/api/users/${editingId}`, 'PUT', {
+          fullName: data.fullName,
+          profileCode: data.profileCode,
+          active: data.active
+        });
+        toast.success('Usuário atualizado com sucesso.');
       } else {
         // Create flow
         if (!data.email) throw new Error("E-mail é obrigatório para novos usuários");
-        await callApi('/api/users', 'POST', data);
-        alert('Usuário criado com sucesso. Um e-mail de convite foi enviado.');
+        if (!data.password) throw new Error("Senha temporária é obrigatória para novos usuários");
+        
+        await callApi('/api/users', 'POST', {
+          fullName: data.fullName,
+          email: data.email,
+          password: data.password,
+          profileCode: data.profileCode,
+          active: data.active,
+          forcePasswordChange: true
+        });
+        toast.success('Usuário criado com sucesso.');
+        setCreatedUser({
+          fullName: data.fullName,
+          email: data.email,
+          password: data.password,
+          profile: data.profileCode === 'admin' ? 'Administrador' : 'Operador'
+        });
       }
       setIsModalOpen(false);
       reset();
       fetchUsers();
     } catch (err: any) {
-      alert('Erro: ' + err.message);
-    }
-  }
-
-  async function resendInvite(userId: string) {
-    try {
-      setActionLoading(`invite-${userId}`);
-      await callApi(`/api/users/${userId}/resend-invite`);
-      alert('Convite reenviado com sucesso.');
-    } catch (err: any) {
-      alert('Erro ao reenviar convite: ' + err.message);
-    } finally {
-      setActionLoading(null);
+      toast.error('Erro: ' + err.message);
     }
   }
 
   async function sendResetPassword(userId: string) {
+    const newPassword = prompt("Digite a nova senha temporária para este usuário:");
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+
     try {
       setActionLoading(`reset-${userId}`);
-      await callApi(`/api/users/${userId}/reset-password`);
-      alert('E-mail de redefinição de senha enviado com sucesso.');
+      await callApi(`/api/users/${userId}/reset-password`, 'POST', { password: newPassword });
+      toast.success('Senha redefinida com sucesso.');
     } catch (err: any) {
-      alert('Erro ao redefinir senha: ' + err.message);
+      toast.error('Erro ao redefinir senha: ' + err.message);
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (confirm("Tem certeza que deseja EXCLUIR este usuário? Esta ação não pode ser desfeita e os registros vinculados podem ser afetados.")) {
+      try {
+        setActionLoading(`delete-${userId}`);
+        await callApi(`/api/users/${userId}`, 'DELETE');
+        toast.success('Usuário excluído com sucesso.');
+        fetchUsers();
+      } catch (err: any) {
+        toast.error('Erro ao excluir usuário: ' + err.message);
+      } finally {
+        setActionLoading(null);
+      }
     }
   }
 
@@ -170,7 +194,7 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-kivon-border">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">Usuários</h1>
-          <p className="mt-2 text-sm text-kivon-text-sec">Gerencie o acesso ao sistema (Administradores e Operadores).</p>
+          <p className="mt-2 text-sm text-kivon-text-sec">Gerencie os acessos ao sistema.</p>
         </div>
         <Button onClick={() => openModal()} className="w-full sm:w-auto bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
           <Plus className="mr-2 h-4 w-4" /> Novo Usuário
@@ -206,27 +230,19 @@ export default function UsersPage() {
                     <Edit2 className="h-4 w-4 mr-2" />
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={() => toggleActive(user.id, user.active)}
-                    isLoading={actionLoading === user.id}
-                    className="h-10 border-kivon-border bg-kivon-bg text-white"
-                  >
-                    {user.active ? 'Inativar' : 'Ativar'}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => resendInvite(user.id)} disabled={actionLoading === `invite-${user.id}`} className="h-10 border-kivon-border bg-kivon-bg text-kivon-primary">
-                    {actionLoading === `invite-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                    Convite
-                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => sendResetPassword(user.id)} disabled={actionLoading === `reset-${user.id}`} className="h-10 border-kivon-border bg-kivon-bg text-kivon-primary">
                     {actionLoading === `reset-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Key className="h-4 w-4 mr-2" />}
                     Senha
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => deleteUser(user.id)} disabled={actionLoading === `delete-${user.id}`} className="col-span-2 h-10 border-red-500/20 bg-kivon-bg text-red-400 hover:bg-red-500/10">
+                    {actionLoading === `delete-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                    Excluir
                   </Button>
                 </div>
               </div>
             ))}
           </div>
+
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-sm text-kivon-text-sec">
               <thead className="bg-kivon-bg/50 text-xs uppercase text-kivon-text-sec">
@@ -257,14 +273,6 @@ export default function UsersPage() {
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => resendInvite(user.id)}
-                          disabled={actionLoading === `invite-${user.id}`}
-                          className="p-1 text-kivon-text-sec hover:text-kivon-primary disabled:opacity-50 transition-colors"
-                          title="Reenviar convite"
-                        >
-                          {actionLoading === `invite-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                        </button>
-                        <button
                           onClick={() => sendResetPassword(user.id)}
                           disabled={actionLoading === `reset-${user.id}`}
                           className="p-1 text-kivon-text-sec hover:text-kivon-primary disabled:opacity-50 transition-colors"
@@ -272,15 +280,14 @@ export default function UsersPage() {
                         >
                           {actionLoading === `reset-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Key className="h-4 w-4" />}
                         </button>
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          onClick={() => toggleActive(user.id, user.active)}
-                          isLoading={actionLoading === user.id}
-                          className="bg-kivon-bg text-kivon-text-sec hover:text-white border border-kivon-border"
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          disabled={actionLoading === `delete-${user.id}`}
+                          className="p-1 text-kivon-text-sec hover:text-red-400 disabled:opacity-50 transition-colors"
+                          title="Excluir usuário"
                         >
-                          {user.active ? 'Inativar' : 'Ativar'}
-                        </Button>
+                          {actionLoading === `delete-${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -292,23 +299,41 @@ export default function UsersPage() {
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Editar Perfil' : 'Novo Usuário'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Editar Usuário' : 'Novo Usuário'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mt-2">
           <Input label="Nome Completo" {...register('fullName')} error={errors.fullName?.message} className="bg-kivon-bg border-kivon-border text-white" />
+          
           {!editingId && (
-            <Input label="E-mail" type="email" {...register('email')} error={errors.email?.message} className="bg-kivon-bg border-kivon-border text-white" />
+            <>
+              <Input label="E-mail" type="email" {...register('email')} error={errors.email?.message} className="bg-kivon-bg border-kivon-border text-white" />
+              <Input label="Senha Temporária" type="text" {...register('password')} error={errors.password?.message} className="bg-kivon-bg border-kivon-border text-white" />
+            </>
           )}
           
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Perfil</label>
-            <select
-              {...register('profileCode')}
-              className="flex h-12 sm:h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
-            >
-              <option value="operador">Operador (Acesso restrito)</option>
-              <option value="admin">Administrador (Acesso total)</option>
-            </select>
-            {errors.profileCode && <p className="mt-1 text-sm text-red-400">{errors.profileCode.message}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Perfil</label>
+              <select
+                {...register('profileCode')}
+                className="flex h-12 sm:h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
+              >
+                <option value="operador">Operador</option>
+                <option value="admin">Administrador</option>
+              </select>
+              {errors.profileCode && <p className="mt-1 text-sm text-red-400">{errors.profileCode.message}</p>}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-kivon-text-sec">Status</label>
+              <select
+                {...register('active', { setValueAs: v => v === 'true' })}
+                className="flex h-12 sm:h-10 w-full rounded-md border border-kivon-border bg-kivon-bg px-3 py-2 text-base sm:text-sm text-white focus:outline-none focus:ring-1 focus:ring-kivon-primary focus:border-kivon-primary transition-all"
+              >
+                <option value="true">Ativo</option>
+                <option value="false">Inativo</option>
+              </select>
+              {errors.active && <p className="mt-1 text-sm text-red-400">{errors.active.message}</p>}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
@@ -316,10 +341,36 @@ export default function UsersPage() {
               Cancelar
             </Button>
             <Button type="submit" isLoading={isSubmitting} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
-              Salvar
+              {editingId ? 'Salvar Alterações' : 'Criar Usuário'}
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!createdUser} onClose={() => setCreatedUser(null)} title="Usuário Criado com Sucesso">
+        {createdUser && (
+          <div className="space-y-4 mt-4">
+            <div className="bg-kivon-bg rounded-lg p-4 border border-kivon-border space-y-3 text-sm">
+              <p><strong className="text-kivon-text-sec">Nome:</strong> <span className="text-white ml-2">{createdUser.fullName}</span></p>
+              <p><strong className="text-kivon-text-sec">E-mail:</strong> <span className="text-white ml-2">{createdUser.email}</span></p>
+              <p><strong className="text-kivon-text-sec">Senha:</strong> <span className="text-white ml-2">{createdUser.password}</span></p>
+              <p><strong className="text-kivon-text-sec">Perfil:</strong> <span className="text-white ml-2">{createdUser.profile}</span></p>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
+              <Button type="button" variant="secondary" onClick={() => setCreatedUser(null)} className="bg-transparent border border-kivon-border text-white hover:bg-kivon-hover">
+                Fechar
+              </Button>
+              <Button type="button" onClick={() => {
+                const text = `Olá, *${createdUser.fullName}*!\n\nSeu acesso ao **KIVON ERP** foi criado com sucesso.\n\n📧 E-mail:\n${createdUser.email}\n\n🔑 Senha:\n${createdUser.password}\n\nAcesse o sistema utilizando essas credenciais.`;
+                navigator.clipboard.writeText(text);
+                toast.success("Credenciais copiadas para a área de transferência.");
+              }} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
+                Copiar Credenciais
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

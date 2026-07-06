@@ -34,6 +34,9 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
     return res.status(401).json({ error: 'Invalid token' });
   }
 
+  // Set user id in headers for subsequent use (like clear-password-flag)
+  req.headers['x-user-id'] = user.id;
+
   // Fetch user profile
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
@@ -48,14 +51,50 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
   next();
 };
 
+const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Missing Authorization header' });
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  
+  if (error || !user) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  req.headers['x-user-id'] = user.id;
+  next();
+};
+
+// Clear force password flag (Authenticated User)
+apiRouter.post('/users/clear-force-password', verifyAuth, async (req, res) => {
+  const userId = req.headers['x-user-id'] as string;
+  try {
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ force_password_change: false })
+      .eq('id', userId);
+      
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create new user (Admin only)
 apiRouter.post('/users', verifyAdmin, async (req, res) => {
-  const { email, fullName, profileCode } = req.body;
+  const { email, fullName, profileCode, password, forcePasswordChange = true, active = true } = req.body;
   
   try {
-    // Create user via Supabase Auth admin API. It will send an invite email by default
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
+    // Create user via Supabase Auth admin API directly (no invite email)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
         full_name: fullName
       }
     });
@@ -82,10 +121,21 @@ apiRouter.post('/users', verifyAdmin, async (req, res) => {
         id: userId,
         profile_id: profileObj.id,
         full_name: fullName,
-        active: true
+        active: active,
+        force_password_change: forcePasswordChange
       });
 
     if (userInsertError) throw userInsertError;
+
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      table_name: 'users',
+      record_id: userId,
+      action: 'INSERT',
+      old_data: {},
+      new_data: { full_name: fullName, profile_code: profileCode, active },
+      changed_by: req.headers['x-user-id'] || null
+    });
 
     res.json({ success: true, user: authData.user });
   } catch (err: any) {
@@ -94,16 +144,54 @@ apiRouter.post('/users', verifyAdmin, async (req, res) => {
   }
 });
 
-// Resend invite
-apiRouter.post('/users/:id/resend-invite', verifyAdmin, async (req, res) => {
+// Update user profile/status
+apiRouter.put('/users/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
+  const { fullName, profileCode, active, forcePasswordChange } = req.body;
+  
   try {
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(id);
-    if (userError) throw userError;
-    
-    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(userData.user.email!);
-    if (inviteError) throw inviteError;
-    
+    const updates: any = {};
+    if (fullName !== undefined) updates.full_name = fullName;
+    if (active !== undefined) updates.active = active;
+    if (forcePasswordChange !== undefined) updates.force_password_change = forcePasswordChange;
+
+    let profileObj = null;
+    if (profileCode) {
+      const { data } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('code', profileCode)
+        .single();
+      if (data) {
+        profileObj = data;
+        updates.profile_id = data.id;
+      }
+    }
+
+    const { data: oldUser } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+
+    const { error: userUpdateError } = await supabaseAdmin
+      .from('users')
+      .update(updates)
+      .eq('id', id);
+
+    if (userUpdateError) throw userUpdateError;
+
+    // also update auth metadata if full name changed
+    if (fullName) {
+      await supabaseAdmin.auth.admin.updateUserById(id, { user_metadata: { full_name: fullName } });
+    }
+
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      table_name: 'users',
+      record_id: id,
+      action: 'UPDATE',
+      old_data: oldUser || {},
+      new_data: updates,
+      changed_by: req.headers['x-user-id'] || null
+    });
+
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);
@@ -111,16 +199,74 @@ apiRouter.post('/users/:id/resend-invite', verifyAdmin, async (req, res) => {
   }
 });
 
-// Reset password email
+// Delete user
+apiRouter.delete('/users/:id', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: userRec } = await supabaseAdmin.from('users').select('*, profile_id(code)').eq('id', id).single();
+    
+    // Prevent deleting last admin
+    if (userRec?.profile_id?.code === 'admin') {
+      const { count: adminCount, error: countError } = await supabaseAdmin
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('profile_id', userRec.profile_id.id)
+        .eq('active', true);
+        
+      if (adminCount === 1) {
+        return res.status(400).json({ error: 'Cannot delete the last admin user.' });
+      }
+    }
+
+    const { data: oldUser } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (deleteError) throw deleteError;
+    
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      table_name: 'users',
+      record_id: id,
+      action: 'DELETE',
+      old_data: oldUser || {},
+      new_data: {},
+      changed_by: req.headers['x-user-id'] || null
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reset password by admin (directly set a new password)
 apiRouter.post('/users/:id/reset-password', verifyAdmin, async (req, res) => {
   const { id } = req.params;
+  const { password } = req.body;
   try {
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(id);
     if (userError) throw userError;
     
-    const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(userData.user.email!);
+    const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(id, {
+      password: password
+    });
+    
     if (resetError) throw resetError;
     
+    // Set force password change
+    await supabaseAdmin.from('users').update({ force_password_change: true }).eq('id', id);
+
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      table_name: 'users',
+      record_id: id,
+      action: 'UPDATE',
+      old_data: {},
+      new_data: { event: 'password_reset_by_admin' },
+      changed_by: req.headers['x-user-id'] || null
+    });
+
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);

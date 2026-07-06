@@ -45,6 +45,11 @@ export function AppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Force password change check
+  if (profile?.force_password_change) {
+    return <Navigate to="/update-password" replace />;
+  }
+
   const isAdmin = profile?.profiles?.code === 'admin';
   const isOperator = profile?.profiles?.code === 'operador';
 
