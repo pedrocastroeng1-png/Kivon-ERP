@@ -12,6 +12,7 @@ import EmployeesPage from '@/src/features/employees/pages/EmployeesPage';
 import UsersPage from '@/src/features/users/pages/UsersPage';
 import ReportsPage from '@/src/features/reports/pages/ReportsPage';
 import DownloadsPage from '@/src/features/downloads/pages/DownloadsPage';
+import NotificationsPage from '@/src/features/admin/notifications/pages/NotificationsPage';
 import { useAuth } from './providers/AuthProvider';
 
 // A simple wrapper to protect admin routes
@@ -93,6 +94,14 @@ const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <UsersPage />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: 'admin/notifications',
+        element: (
+          <AdminRoute>
+            <NotificationsPage />
           </AdminRoute>
         ),
       },

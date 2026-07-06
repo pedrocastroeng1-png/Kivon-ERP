@@ -21,7 +21,7 @@ apiRouter.use(cors());
 apiRouter.use(express.json());
 
 // Middleware to verify if the requesting user is an admin
-const verifyAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
@@ -49,14 +49,14 @@ const verifyAdmin = async (req: express.Request, res: express.Response, next: ex
   const profileCode = (userData as any)?.profiles?.code;
 
   if (userError || profileCode !== 'admin') {
-    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Access Denied. User ID: ${user.id}, Profile: ${profileCode || 'Unknown'}, Reason: Not an admin`);
-    return res.status(403).json({ error: 'Forbidden: Admins only' });
+    console.warn(`[Auth] Forbidden - Endpoint: ${req.method} ${req.originalUrl}, User ID: ${user.id}, Email: ${user.email || 'Unknown'}, Profile: ${profileCode || 'Unknown'}, Reason: Not an admin`);
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   next();
 };
 
-const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
@@ -76,7 +76,7 @@ const verifyAuth = async (req: express.Request, res: express.Response, next: exp
 };
 
 // Clear force password flag (Authenticated User)
-apiRouter.post('/users/clear-force-password', verifyAuth, async (req, res) => {
+apiRouter.post('/users/clear-force-password', requireAuth, async (req, res) => {
   const userId = req.headers['x-user-id'] as string;
   try {
     const { error } = await supabaseAdmin
@@ -87,12 +87,12 @@ apiRouter.post('/users/clear-force-password', verifyAuth, async (req, res) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.toString() });
   }
 });
 
 // Create new user (Admin only)
-apiRouter.post('/users', verifyAdmin, async (req, res) => {
+apiRouter.post('/users', requireAdmin, async (req, res) => {
   const { email, fullName, profileCode, password, forcePasswordChange = true, active = true } = req.body;
   
   try {
@@ -129,7 +129,7 @@ apiRouter.post('/users', verifyAdmin, async (req, res) => {
         profile_id: profileObj.id,
         full_name: fullName,
         active: active,
-        force_password_change: forcePasswordChange
+        // force_password_change: forcePasswordChange
       });
 
     if (userInsertError) throw userInsertError;
@@ -138,7 +138,7 @@ apiRouter.post('/users', verifyAdmin, async (req, res) => {
     await supabaseAdmin.from('audit_logs').insert({
       table_name: 'users',
       record_id: userId,
-      action: 'INSERT',
+      operation: 'insert',
       old_data: {},
       new_data: { full_name: fullName, profile_code: profileCode, active },
       changed_by: req.headers['x-user-id'] || null
@@ -147,20 +147,39 @@ apiRouter.post('/users', verifyAdmin, async (req, res) => {
     res.json({ success: true, user: authData.user });
   } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.toString() });
   }
 });
 
 // Update user profile/status
-apiRouter.put('/users/:id', verifyAdmin, async (req, res) => {
+apiRouter.put('/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { fullName, profileCode, active, forcePasswordChange } = req.body;
   
   try {
+    const { data: oldUser } = await supabaseAdmin.from('users').select('*, profiles(code)').eq('id', id).single();
+    
+    // Prevent removing the last active admin
+    if (oldUser?.profiles?.code === 'admin' && oldUser?.active === true) {
+      const isBeingDeactivated = active === false;
+      const isProfileChanged = profileCode && profileCode !== 'admin';
+      
+      if (isBeingDeactivated || isProfileChanged) {
+        const { count: adminCount } = await supabaseAdmin
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('profile_id', oldUser.profile_id)
+          .eq('active', true);
+          
+        if (adminCount === 1) {
+          return res.status(409).json({ error: 'The system must always have at least one active administrator.' });
+        }
+      }
+    }
     const updates: any = {};
     if (fullName !== undefined) updates.full_name = fullName;
     if (active !== undefined) updates.active = active;
-    if (forcePasswordChange !== undefined) updates.force_password_change = forcePasswordChange;
+    // if (forcePasswordChange !== undefined) updates.force_password_change = forcePasswordChange;
 
     let profileObj = null;
     if (profileCode) {
@@ -175,7 +194,7 @@ apiRouter.put('/users/:id', verifyAdmin, async (req, res) => {
       }
     }
 
-    const { data: oldUser } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+
 
     const { error: userUpdateError } = await supabaseAdmin
       .from('users')
@@ -193,7 +212,7 @@ apiRouter.put('/users/:id', verifyAdmin, async (req, res) => {
     await supabaseAdmin.from('audit_logs').insert({
       table_name: 'users',
       record_id: id,
-      action: 'UPDATE',
+      operation: 'update',
       old_data: oldUser || {},
       new_data: updates,
       changed_by: req.headers['x-user-id'] || null
@@ -202,30 +221,71 @@ apiRouter.put('/users/:id', verifyAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.toString() });
   }
 });
 
 // Delete user
-apiRouter.delete('/users/:id', verifyAdmin, async (req, res) => {
+apiRouter.delete('/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
-    const { data: userRec } = await supabaseAdmin.from('users').select('*, profile_id(code)').eq('id', id).single();
+    const { data: userRec } = await supabaseAdmin.from('users').select('*, profiles(code)').eq('id', id).single();
     
     // Prevent deleting last admin
-    if (userRec?.profile_id?.code === 'admin') {
-      const { count: adminCount, error: countError } = await supabaseAdmin
+    if (userRec?.profiles?.code === 'admin' && userRec?.active === true) {
+      const { count: adminCount } = await supabaseAdmin
         .from('users')
         .select('*', { count: 'exact', head: true })
-        .eq('profile_id', userRec.profile_id.id)
+        .eq('profile_id', userRec.profile_id)
         .eq('active', true);
         
       if (adminCount === 1) {
-        return res.status(400).json({ error: 'Cannot delete the last admin user.' });
+        return res.status(409).json({ error: 'The system must always have at least one active administrator.' });
       }
     }
 
+    // Check for historical business data
+    const [
+      { count: auditCount },
+      { count: presenceCount },
+      { count: photosCount },
+      { count: notifCreatedCount },
+      { count: notifResolvedCount }
+    ] = await Promise.all([
+      supabaseAdmin.from('audit_logs').select('*', { count: 'exact', head: true }).eq('changed_by', id),
+      supabaseAdmin.from('presence').select('*', { count: 'exact', head: true }).eq('registered_by', id),
+      supabaseAdmin.from('presence_photos').select('*', { count: 'exact', head: true }).eq('captured_by', id),
+      supabaseAdmin.from('notifications').select('*', { count: 'exact', head: true }).eq('created_by', id),
+      supabaseAdmin.from('notifications').select('*', { count: 'exact', head: true }).eq('resolved_by', id)
+    ]);
+
+    const hasHistory = (auditCount || 0) > 0 || 
+                       (presenceCount || 0) > 0 || 
+                       (photosCount || 0) > 0 || 
+                       (notifCreatedCount || 0) > 0 || 
+                       (notifResolvedCount || 0) > 0;
+
+    if (hasHistory) {
+      const { error: deactivateError } = await supabaseAdmin.from('users').update({ active: false }).eq('id', id);
+      if (deactivateError) throw deactivateError;
+      
+      // Audit log for deactivation
+      await supabaseAdmin.from('audit_logs').insert({
+        table_name: 'users',
+        record_id: id,
+        operation: 'update',
+        old_data: userRec,
+        new_data: { active: false, _reason: 'Soft delete due to existing history' },
+        changed_by: req.headers['x-user-id'] || null
+      });
+
+      return res.json({ success: true, message: 'User deactivated because they have historical records.' });
+    }
+
     const { data: oldUser } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
+    
+    const { error: dbDeleteError } = await supabaseAdmin.from('users').delete().eq('id', id);
+    if (dbDeleteError) throw dbDeleteError;
 
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (deleteError) throw deleteError;
@@ -234,7 +294,7 @@ apiRouter.delete('/users/:id', verifyAdmin, async (req, res) => {
     await supabaseAdmin.from('audit_logs').insert({
       table_name: 'users',
       record_id: id,
-      action: 'DELETE',
+      operation: 'delete',
       old_data: oldUser || {},
       new_data: {},
       changed_by: req.headers['x-user-id'] || null
@@ -243,12 +303,12 @@ apiRouter.delete('/users/:id', verifyAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.toString() });
   }
 });
 
 // Reset password by admin (directly set a new password)
-apiRouter.post('/users/:id/reset-password', verifyAdmin, async (req, res) => {
+apiRouter.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
   try {
@@ -262,13 +322,13 @@ apiRouter.post('/users/:id/reset-password', verifyAdmin, async (req, res) => {
     if (resetError) throw resetError;
     
     // Set force password change
-    await supabaseAdmin.from('users').update({ force_password_change: true }).eq('id', id);
+    // await supabaseAdmin.from('users').update({ force_password_change: true }).eq('id', id);
 
     // Audit log
     await supabaseAdmin.from('audit_logs').insert({
       table_name: 'users',
       record_id: id,
-      action: 'UPDATE',
+      operation: 'update',
       old_data: {},
       new_data: { event: 'password_reset_by_admin' },
       changed_by: req.headers['x-user-id'] || null
@@ -277,6 +337,6 @@ apiRouter.post('/users/:id/reset-password', verifyAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.toString() });
   }
 });

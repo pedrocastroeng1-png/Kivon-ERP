@@ -62,7 +62,7 @@ export function AppLayout() {
     { name: 'Relatórios', href: '/relatorios', icon: FileText, show: isAdmin },
     { name: 'Usuários', href: '/usuarios', icon: Settings, show: isAdmin },
     { name: 'Cargos', href: '/cargos', icon: Briefcase, show: isAdmin },
-    { name: 'Central Inteligente', href: '/central-inteligente', icon: Megaphone, show: isAdmin },
+    { name: 'Central Inteligente', href: '/admin/notifications', icon: Megaphone, show: isAdmin },
     { name: 'App Mobile', href: '/downloads', icon: Download, show: true },
   ].filter(item => item.show);
 
