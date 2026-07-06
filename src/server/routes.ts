@@ -1,79 +1,10 @@
 import express from "express";
-import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
 import cors from "cors";
-
-dotenv.config();
-
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { supabaseAdmin, requireAdmin, requireAuth } from "./auth";
 
 export const apiRouter = express.Router();
-
 apiRouter.use(cors());
 apiRouter.use(express.json());
-
-// Middleware to verify if the requesting user is an admin
-const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  
-  if (error || !user) {
-    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Invalid token`);
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-
-  // Set user id in headers for subsequent use (like clear-password-flag)
-  req.headers['x-user-id'] = user.id;
-
-  // Fetch user profile using the correct relationship
-  const { data: userData, error: userError } = await supabaseAdmin
-    .from('users')
-    .select('profiles!inner(code)')
-    .eq('id', user.id)
-    .single();
-
-  const profileCode = (userData as any)?.profiles?.code;
-
-  if (userError || profileCode !== 'admin') {
-    console.warn(`[Auth] Forbidden - Endpoint: ${req.method} ${req.originalUrl}, User ID: ${user.id}, Email: ${user.email || 'Unknown'}, Profile: ${profileCode || 'Unknown'}, Reason: Not an admin`);
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  next();
-};
-
-const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Missing Authorization header`);
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  
-  if (error || !user) {
-    console.warn(`[Auth] ${req.method} ${req.originalUrl} - Invalid token`);
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-
-  req.headers['x-user-id'] = user.id;
-  next();
-};
 
 // Clear force password flag (Authenticated User)
 apiRouter.post('/users/clear-force-password', requireAuth, async (req, res) => {
