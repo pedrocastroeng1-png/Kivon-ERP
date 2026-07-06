@@ -24,10 +24,10 @@ export default async function handler(req: any, res: any) {
       return; // Response already sent
     }
 
-    const { email, fullName, profileCode, password, active = true } = req.body;
+    const { username, fullName, profileCode, password, active = true } = req.body;
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
+      email: `${username}@kivon.local`,
       password: req.body.password,
       email_confirm: true,
       user_metadata: { full_name: fullName }

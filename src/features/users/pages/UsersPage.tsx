@@ -21,7 +21,7 @@ interface UserProfile {
 
 const userSchema = z.object({
   fullName: z.string().min(1, 'Nome é obrigatório'),
-  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  username: z.string().optional().or(z.literal('')),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional().or(z.literal('')),
   profileCode: z.enum(['admin', 'operador']),
   active: z.boolean(),
@@ -37,7 +37,7 @@ export default function UsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [createdUser, setCreatedUser] = useState<{
     fullName: string;
-    email: string;
+    username: string;
     password?: string;
     profile: string;
   } | null>(null);
@@ -78,13 +78,13 @@ export default function UsersPage() {
       reset({
         fullName: user.full_name,
         profileCode: user.profiles?.code as 'admin' | 'operador',
-        email: '',
+        username: '',
         password: '',
         active: user.active
       });
     } else {
       setEditingId(null);
-      reset({ fullName: '', email: '', password: '', profileCode: 'operador', active: true });
+      reset({ fullName: '', username: '', password: '', profileCode: 'operador', active: true });
     }
     setIsModalOpen(true);
   }
@@ -128,12 +128,12 @@ export default function UsersPage() {
         toast.success('Usuário atualizado com sucesso.');
       } else {
         // Create flow
-        if (!data.email) throw new Error("E-mail é obrigatório para novos usuários");
+        if (!data.username) throw new Error("Nome de usuário é obrigatório para novos usuários");
         if (!data.password) throw new Error("Senha temporária é obrigatória para novos usuários");
         
         await callApi('/api/users', 'POST', {
           fullName: data.fullName,
-          email: data.email,
+          username: data.username,
           password: data.password,
           profileCode: data.profileCode,
           active: data.active,
@@ -142,7 +142,7 @@ export default function UsersPage() {
         toast.success('Usuário criado com sucesso.');
         setCreatedUser({
           fullName: data.fullName,
-          email: data.email,
+          username: data.username,
           password: data.password,
           profile: data.profileCode === 'admin' ? 'Administrador' : 'Operador'
         });
@@ -305,7 +305,7 @@ export default function UsersPage() {
           
           {!editingId && (
             <>
-              <Input label="E-mail" type="email" {...register('email')} error={errors.email?.message} className="bg-kivon-bg border-kivon-border text-white" />
+              <Input label="Nome de Usuário" type="text" {...register('username')} error={errors.username?.message} className="bg-kivon-bg border-kivon-border text-white" />
               <Input label="Senha Temporária" type="text" {...register('password')} error={errors.password?.message} className="bg-kivon-bg border-kivon-border text-white" />
             </>
           )}
@@ -358,8 +358,8 @@ export default function UsersPage() {
                 <p className="text-white">{createdUser.fullName}</p>
               </div>
               <div>
-                <p className="text-kivon-text-sec mb-1">Email:</p>
-                <p className="text-white">{createdUser.email}</p>
+                <p className="text-kivon-text-sec mb-1">Username:</p>
+                <p className="text-white">{createdUser.username}</p>
               </div>
               <div>
                 <p className="text-kivon-text-sec mb-1">Password:</p>
@@ -372,7 +372,7 @@ export default function UsersPage() {
                 Fechar
               </Button>
               <Button type="button" onClick={() => {
-                const text = `KIVON ERP\n\nName:\n${createdUser.fullName}\n\nEmail:\n${createdUser.email}\n\nPassword:\n${createdUser.password}`;
+                const text = `KIVON ERP\n\nName:\n${createdUser.fullName}\n\nUsername:\n${createdUser.username}\n\nPassword:\n${createdUser.password}`;
                 navigator.clipboard.writeText(text);
                 toast.success("Credenciais copiadas para a área de transferência.");
               }} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">

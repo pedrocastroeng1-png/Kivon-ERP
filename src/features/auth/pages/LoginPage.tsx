@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError('');
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: `${username}@kivon.local`,
       password,
     });
 
@@ -73,15 +73,15 @@ export default function LoginPage() {
 
           <div className="space-y-5">
             <div className="group">
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2 transition-colors group-focus-within:text-white/70" htmlFor="email">Email Corporativo</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2 transition-colors group-focus-within:text-white/70" htmlFor="username">Nome de Usuário</label>
               <input
-                id="email"
-                type="email"
+                id="username"
+                type="text"
                 required
                 className="w-full rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3.5 text-white/90 placeholder-white/20 focus:border-white/20 focus:bg-black/50 focus:outline-none focus:ring-1 focus:ring-white/20 sm:text-sm transition-all duration-300"
-                placeholder="nome@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             

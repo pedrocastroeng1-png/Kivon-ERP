@@ -24,12 +24,12 @@ apiRouter.post('/users/clear-force-password', requireAuth, async (req, res) => {
 
 // Create new user (Admin only)
 apiRouter.post('/users', requireAdmin, async (req, res) => {
-  const { email, fullName, profileCode, password, forcePasswordChange = true, active = true } = req.body;
+  const { username, fullName, profileCode, password, forcePasswordChange = true, active = true } = req.body;
   
   try {
     // Create user via Supabase Auth admin API directly (no invite email)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
+      email: `${username}@kivon.local`,
       password: password,
       email_confirm: true,
       user_metadata: {
