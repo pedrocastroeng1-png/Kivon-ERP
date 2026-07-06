@@ -350,11 +350,21 @@ export default function UsersPage() {
       <Modal isOpen={!!createdUser} onClose={() => setCreatedUser(null)} title="Usuário Criado com Sucesso">
         {createdUser && (
           <div className="space-y-4 mt-4">
-            <div className="bg-kivon-bg rounded-lg p-4 border border-kivon-border space-y-3 text-sm">
-              <p><strong className="text-kivon-text-sec">Nome:</strong> <span className="text-white ml-2">{createdUser.fullName}</span></p>
-              <p><strong className="text-kivon-text-sec">E-mail:</strong> <span className="text-white ml-2">{createdUser.email}</span></p>
-              <p><strong className="text-kivon-text-sec">Senha:</strong> <span className="text-white ml-2">{createdUser.password}</span></p>
-              <p><strong className="text-kivon-text-sec">Perfil:</strong> <span className="text-white ml-2">{createdUser.profile}</span></p>
+            <div className="bg-kivon-bg rounded-lg p-4 border border-kivon-border space-y-4 text-sm font-mono">
+              <p className="text-center font-bold text-white mb-4">KIVON ERP</p>
+              <p className="text-emerald-400 mb-6 text-center">User created successfully.</p>
+              <div>
+                <p className="text-kivon-text-sec mb-1">Name:</p>
+                <p className="text-white">{createdUser.fullName}</p>
+              </div>
+              <div>
+                <p className="text-kivon-text-sec mb-1">Email:</p>
+                <p className="text-white">{createdUser.email}</p>
+              </div>
+              <div>
+                <p className="text-kivon-text-sec mb-1">Password:</p>
+                <p className="text-white">{createdUser.password}</p>
+              </div>
             </div>
             
             <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-kivon-border">
@@ -362,7 +372,7 @@ export default function UsersPage() {
                 Fechar
               </Button>
               <Button type="button" onClick={() => {
-                const text = `--------------------------------\n\nKIVON ERP\n\nEmail:\n${createdUser.email}\n\nPassword:\n${createdUser.password}\n\n--------------------------------`;
+                const text = `KIVON ERP\n\nName:\n${createdUser.fullName}\n\nEmail:\n${createdUser.email}\n\nPassword:\n${createdUser.password}`;
                 navigator.clipboard.writeText(text);
                 toast.success("Credenciais copiadas para a área de transferência.");
               }} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">

@@ -12,7 +12,6 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     // Check if we have a session. If not, redirect to login.
-    // The user should have been logged in by the invite/recovery link.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         navigate('/login');

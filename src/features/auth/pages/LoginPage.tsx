@@ -7,7 +7,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   
@@ -18,7 +17,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccessMsg('');
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -72,11 +70,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-          {successMsg && (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs font-medium text-emerald-400">
-              {successMsg}
-            </div>
-          )}
 
           <div className="space-y-5">
             <div className="group">
@@ -93,31 +86,7 @@ export default function LoginPage() {
             </div>
             
             <div className="group">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-[10px] font-semibold uppercase tracking-wider text-white/40 transition-colors group-focus-within:text-white/70" htmlFor="password">Senha de Acesso</label>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!email) {
-                      setError('Digite seu email para redefinir a senha.');
-                      return;
-                    }
-                    setLoading(true);
-                    setError('');
-                    setSuccessMsg('');
-                    const { error } = await supabase.auth.resetPasswordForEmail(email);
-                    if (error) {
-                      setError('Erro: ' + error.message);
-                    } else {
-                      setSuccessMsg('Um link de redefinição foi enviado para seu e-mail.');
-                    }
-                    setLoading(false);
-                  }}
-                  className="text-[10px] font-medium tracking-wide text-white/30 hover:text-white/70 transition-colors duration-300"
-                >
-                  Esqueceu a senha?
-                </button>
-              </div>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2 transition-colors group-focus-within:text-white/70" htmlFor="password">Senha de Acesso</label>
               <input
                 id="password"
                 type="password"
@@ -151,7 +120,6 @@ export default function LoginPage() {
               <div className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-150%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(150%)]">
                 <div className="relative h-full w-12 bg-white/30" />
               </div>
-
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
