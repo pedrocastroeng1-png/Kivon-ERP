@@ -1,6 +1,7 @@
 import { supabaseAdmin, requireAdmin } from "../../../src/server/auth";
 
 export default async function handler(req: any, res: any) {
+  try {
   // CORS setup
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,7 +12,7 @@ export default async function handler(req: any, res: any) {
   );
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200).json({});
   }
 
   if (req.method !== 'POST') {
@@ -25,16 +26,29 @@ export default async function handler(req: any, res: any) {
 
   const { id } = req.query;
 
-  try {
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(id);
-    if (userError) throw userError;
-      
-    const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(userData.user.email!);
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'Password is required' });
+    }
+    
+    const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(id, { password });
     if (resetError) throw resetError;
       
     return res.status(200).json({ success: true });
   } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+    console.error("=== API ERROR ===");
+    console.error("error.name:", err.name);
+    console.error("error.message:", err.message);
+    console.error("error.stack:", err.stack);
+    
+    if (err.code) console.error("error.code:", err.code);
+    if (err.details) console.error("error.details:", err.details);
+    if (err.hint) console.error("error.hint:", err.hint);
+
+    return res.status(500).json({ 
+      success: false, 
+      error: err.message || 'Internal Server Error',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 }

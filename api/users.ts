@@ -1,33 +1,36 @@
 import { supabaseAdmin, requireAdmin } from "../src/server/auth";
 
 export default async function handler(req: any, res: any) {
-  // CORS setup
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const authPassed = await requireAdmin(req, res);
-  if (authPassed !== null) {
-    return; // Response already sent
-  }
-
-  const { email, fullName, profileCode } = req.body;
-
   try {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName }
+    // CORS setup
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+    );
+
+    if (req.method === 'OPTIONS') {
+      return res.status(200).json({});
+    }
+
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const authPassed = await requireAdmin(req, res);
+    if (authPassed !== null) {
+      return; // Response already sent
+    }
+
+    const { email, fullName, profileCode, password, active = true } = req.body;
+
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: req.body.password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName }
     });
 
     if (authError) throw authError;
@@ -50,14 +53,26 @@ export default async function handler(req: any, res: any) {
         id: userId,
         profile_id: profileObj.id,
         full_name: fullName,
-        active: true
+        active: active
       });
 
     if (userInsertError) throw userInsertError;
 
     return res.status(200).json({ success: true, user: authData.user });
   } catch (err: any) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+    console.error("=== API ERROR ===");
+    console.error("error.name:", err.name);
+    console.error("error.message:", err.message);
+    console.error("error.stack:", err.stack);
+    
+    if (err.code) console.error("error.code:", err.code);
+    if (err.details) console.error("error.details:", err.details);
+    if (err.hint) console.error("error.hint:", err.hint);
+
+    return res.status(500).json({ 
+      success: false, 
+      error: err.message || 'Internal Server Error',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 }

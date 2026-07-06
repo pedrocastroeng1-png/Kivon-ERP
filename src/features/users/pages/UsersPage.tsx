@@ -362,7 +362,7 @@ export default function UsersPage() {
                 Fechar
               </Button>
               <Button type="button" onClick={() => {
-                const text = `Olá, *${createdUser.fullName}*!\n\nSeu acesso ao **KIVON ERP** foi criado com sucesso.\n\n📧 E-mail:\n${createdUser.email}\n\n🔑 Senha:\n${createdUser.password}\n\nAcesse o sistema utilizando essas credenciais.`;
+                const text = `--------------------------------\n\nKIVON ERP\n\nEmail:\n${createdUser.email}\n\nPassword:\n${createdUser.password}\n\n--------------------------------`;
                 navigator.clipboard.writeText(text);
                 toast.success("Credenciais copiadas para a área de transferência.");
               }} className="bg-kivon-primary hover:bg-kivon-primary-hover text-black shadow-lg shadow-kivon-primary/20">
