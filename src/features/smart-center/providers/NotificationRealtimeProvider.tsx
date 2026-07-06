@@ -7,7 +7,7 @@ export const NOTIFICATIONS_CACHE_KEY = 'user_notifications';
 
 export function NotificationRealtimeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<any>(null) // TODO: Refactor to RealtimeChannel;
 
   useEffect(() => {
     if (!user) {
