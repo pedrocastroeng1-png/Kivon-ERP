@@ -2,74 +2,107 @@ const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 async function run() {
-  const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
-  console.log("Login HTTP Method: POST (Supabase SDK)");
-  const { data: authData } = await supabase.auth.signInWithPassword({
-    email: 'pedro@kivon.local',
-    password: '13052008'
-  });
-  console.log("Login Result: PASS");
-  const token = authData.session.access_token;
+  let log = "";
+  const appendLog = (msg) => {
+    console.log(msg);
+    log += msg + "\n";
+  };
   
-  const resCreate = await fetch('http://localhost:3000/api/users', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: 'e2e_user',
-      fullName: 'E2E User',
-      password: 'password123',
-      profileCode: 'operador'
-    })
-  });
-  console.log("Create Status:", resCreate.status);
-  
-  if (resCreate.status === 200) {
-    const data = await resCreate.json();
-    const id = data.user.id;
-    console.log("Create Result: PASS");
+  try {
+    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SECRET_KEY);
     
-    // Edit
-    const resEdit = await fetch(`http://localhost:3000/api/users/${id}`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName: 'E2E User Edited' })
+    appendLog("Login HTTP Method: POST (Supabase SDK)");
+    appendLog("Login URL: /auth/v1/token?grant_type=password");
+    
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: 'pedrotargos@gmail.com',
+      password: 'KivonAdmin2026!'
     });
-    console.log("Edit Status:", resEdit.status);
-
-    // Deactivate
-    const resDeact = await fetch(`http://localhost:3000/api/users/${id}`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: false })
-    });
-    console.log("Deactivate Status:", resDeact.status);
-
-    // Activate
-    const resAct = await fetch(`http://localhost:3000/api/users/${id}`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: true })
-    });
-    console.log("Activate Status:", resAct.status);
-
-    // Reset password
-    const resPass = await fetch(`http://localhost:3000/api/users/${id}/reset-password`, {
+    
+    if (authError) {
+      appendLog("Login Result: FAIL - " + authError.message);
+      return;
+    }
+    appendLog("Login Response Status: 200");
+    appendLog("Login Result: PASS\n");
+    
+    const token = authData.session.access_token;
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+    
+    appendLog("Create User HTTP Method: POST");
+    appendLog("Create User URL: /api/users");
+    const createRes = await fetch('http://localhost:3000/api/users', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: 'newpassword123' })
+      headers,
+      body: JSON.stringify({
+        username: 'e2euser123',
+        fullName: 'E2E Test User',
+        profileCode: 'operador',
+        password: 'TestPassword123!',
+        active: true
+      })
     });
-    console.log("Change Password Status:", resPass.status);
-
-    // Delete
-    const resDel = await fetch(`http://localhost:3000/api/users/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    console.log("Delete Status:", resDel.status);
+    appendLog("Create User Response Status: " + createRes.status);
+    const createText = await createRes.text();
+    appendLog("Create User Response Body: " + createText);
+    appendLog("Create User Result: " + (createRes.ok ? "PASS" : "FAIL") + "\n");
     
-    // Logout
-    const { error } = await supabase.auth.signOut();
-    console.log("Logout Status:", error ? error : 204);
+    let userId;
+    if (createRes.ok) {
+      userId = JSON.parse(createText).user.id;
+    }
+    
+    if (userId) {
+      appendLog("Edit User HTTP Method: PUT");
+      appendLog("Edit User URL: /api/users/" + userId);
+      const editRes = await fetch(`http://localhost:3000/api/users/${userId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ fullName: 'E2E Test User Edited' })
+      });
+      appendLog("Edit User Response Status: " + editRes.status);
+      appendLog("Edit User Response Body: " + await editRes.text());
+      appendLog("Edit User Result: " + (editRes.ok ? "PASS" : "FAIL") + "\n");
+      
+      appendLog("Change Password HTTP Method: POST");
+      appendLog("Change Password URL: /api/users/" + userId + "/reset-password");
+      const cpRes = await fetch(`http://localhost:3000/api/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ password: 'NewTestPassword123!' })
+      });
+      appendLog("Change Password Response Status: " + cpRes.status);
+      appendLog("Change Password Response Body: " + await cpRes.text());
+      appendLog("Change Password Result: " + (cpRes.ok ? "PASS" : "FAIL") + "\n");
+      
+      appendLog("Delete User HTTP Method: DELETE");
+      appendLog("Delete User URL: /api/users/" + userId);
+      const delRes = await fetch(`http://localhost:3000/api/users/${userId}`, {
+        method: 'DELETE',
+        headers
+      });
+      appendLog("Delete User Response Status: " + delRes.status);
+      appendLog("Delete User Response Body: " + await delRes.text());
+      appendLog("Delete User Result: " + (delRes.ok ? "PASS" : "FAIL") + "\n");
+    }
+    
+    appendLog("Logout HTTP Method: POST (Supabase SDK)");
+    appendLog("Logout URL: /auth/v1/logout");
+    const { error: logoutError } = await supabase.auth.signOut();
+    if (logoutError) {
+      appendLog("Logout Result: FAIL - " + logoutError.message);
+    } else {
+      appendLog("Logout Response Status: 204");
+      appendLog("Logout Result: PASS\n");
+    }
+    
+    const fs = require('fs');
+    fs.writeFileSync('test-all-results.txt', log);
+  } catch (e) {
+    console.error(e);
   }
 }
 run();

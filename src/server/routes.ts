@@ -175,44 +175,7 @@ apiRouter.delete('/users/:id', requireAdmin, async (req, res) => {
       }
     }
 
-    // Check for historical business data
-    const [
-      { count: auditCount },
-      { count: presenceCount },
-      { count: photosCount },
-      { count: notifCreatedCount },
-      { count: notifResolvedCount }
-    ] = await Promise.all([
-      supabaseAdmin.from('audit_logs').select('*', { count: 'exact', head: true }).eq('changed_by', id),
-      supabaseAdmin.from('presence').select('*', { count: 'exact', head: true }).eq('registered_by', id),
-      supabaseAdmin.from('presence_photos').select('*', { count: 'exact', head: true }).eq('captured_by', id),
-      supabaseAdmin.from('notifications').select('*', { count: 'exact', head: true }).eq('created_by', id),
-      supabaseAdmin.from('notifications').select('*', { count: 'exact', head: true }).eq('resolved_by', id)
-    ]);
-
-    const hasHistory = (auditCount || 0) > 0 || 
-                       (presenceCount || 0) > 0 || 
-                       (photosCount || 0) > 0 || 
-                       (notifCreatedCount || 0) > 0 || 
-                       (notifResolvedCount || 0) > 0;
-
-    if (hasHistory) {
-      const { error: deactivateError } = await supabaseAdmin.from('users').update({ active: false }).eq('id', id);
-      if (deactivateError) throw deactivateError;
-      
-      // Audit log for deactivation
-      await supabaseAdmin.from('audit_logs').insert({
-        table_name: 'users',
-        record_id: id,
-        operation: 'update',
-        old_data: userRec,
-        new_data: { active: false, _reason: 'Soft delete due to existing history' },
-        changed_by: req.headers['x-user-id'] || null
-      });
-
-      return res.json({ success: true, message: 'User deactivated because they have historical records.' });
-    }
-
+    // Check for historical business data (soft delete disabled as we now use DB cascades)
     const { data: oldUser } = await supabaseAdmin.from('users').select('*').eq('id', id).single();
     
     const { error: dbDeleteError } = await supabaseAdmin.from('users').delete().eq('id', id);
