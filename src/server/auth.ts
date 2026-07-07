@@ -15,60 +15,70 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
 });
 
 export const requireAdmin = async (req: Request | any, res: Response | any, next?: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  
-  if (error || !user) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Missing Authorization header' });
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-  req.headers['x-user-id'] = user.id;
+    req.headers['x-user-id'] = user.id;
 
-  const { data: userData, error: userError } = await supabaseAdmin
-    .from('users')
-    .select('profiles!inner(code), active')
-    .eq('id', user.id)
-    .single();
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('profiles!inner(code), active')
+      .eq('id', user.id)
+      .single();
 
-  const profileCodeFromJoin = (userData as any)?.profiles?.code;
-  const active = (userData as any)?.active;
+    const profileCodeFromJoin = (userData as any)?.profiles?.code;
+    const active = (userData as any)?.active;
 
-  if (userError || profileCodeFromJoin !== 'admin' || !active) {
-    return res.status(403).json({ error: 'Forbidden: Admins only' });
-  }
+    if (userError || profileCodeFromJoin !== 'admin' || !active) {
+      return res.status(403).json({ error: 'Forbidden: Admins only' });
+    }
 
-  if (next) {
-    next();
-  } else {
-    // For Vercel serverless functions without 'next'
-    return null;
+    if (next) {
+      next();
+    } else {
+      // For Vercel serverless functions without 'next'
+      return null;
+    }
+  } catch (err: any) {
+    console.error('requireAdmin error:', err);
+    return res.status(500).json({ error: err?.message || 'Internal Server Error' });
   }
 };
 
 export const requireAuth = async (req: Request | any, res: Response | any, next?: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Missing Authorization header' });
-  }
-  
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  
-  if (error || !user) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Missing Authorization header' });
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-  req.headers['x-user-id'] = user.id;
-  
-  if (next) {
-    next();
-  } else {
-    return null;
+    req.headers['x-user-id'] = user.id;
+    
+    if (next) {
+      next();
+    } else {
+      return null;
+    }
+  } catch (err: any) {
+    console.error('requireAuth error:', err);
+    return res.status(500).json({ error: err?.message || 'Internal Server Error' });
   }
 };
