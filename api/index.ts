@@ -1,11 +1,3 @@
-import express from 'express';
-import cors from 'cors';
-import { apiRouter } from '../src/server/routes';
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-app.use('/api', apiRouter);
+import app from '../src/server/app.js';
 
 export default app;

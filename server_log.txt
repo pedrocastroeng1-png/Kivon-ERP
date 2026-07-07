@@ -1,5 +1,0 @@
-◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
-◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
-WebSocket server error: Port 24678 is already in use
-Initial admin user pedrotargos@gmail.com already exists.
-Server running on http://localhost:3000
